@@ -5,7 +5,9 @@ from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
-from sklearn.metrics import (accuracy_score, f1_score, roc_auc_score, 
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import (accuracy_score, f1_score, roc_auc_score,
                             precision_score, recall_score, matthews_corrcoef,
                             confusion_matrix)
 from sklearn.preprocessing import StandardScaler
@@ -43,18 +45,31 @@ classifiers = {
     "Logistic Regression": {
         'model': make_pipeline(
             StandardScaler(),
-            LogisticRegression(max_iter=5000, class_weight='balanced', 
-                             solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1)
+            LogisticRegression(max_iter=5000, class_weight='balanced',
+                             solver='saga', penalty='l1', C=0.1,
+                             random_state=42, n_jobs=-1)
         ),
         'selector': SelectFromModel(LogisticRegression(), max_features=5)
     },
     "SVM": {
         'model': make_pipeline(
             StandardScaler(),
-            SVC(kernel='linear', probability=True, class_weight='balanced',
-                C=0.5, max_iter=1000, shrinking=True, random_state=42)
+            SVC(kernel='linear', probability=True,
+                class_weight='balanced', C=0.5,
+                max_iter=1000, shrinking=True, random_state=42)
         ),
         'selector': SelectFromModel(RandomForestClassifier(n_estimators=100), max_features=5)
+    },
+    "K-Neighbors": {
+        'model': make_pipeline(
+            StandardScaler(),
+            KNeighborsClassifier(n_neighbors=5, weights='distance')
+        ),
+        'selector': SelectFromModel(RandomForestClassifier(n_estimators=100), max_features=5)
+    },
+    "Decision Tree": {
+        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
+        'selector': SelectFromModel(DecisionTreeClassifier(), max_features=5)
     }
 }
 
@@ -87,9 +102,13 @@ for clf_name, clf_info in classifiers.items():
             importances = pd.Series(model.feature_importances_, index=selected_features)
         elif clf_name == "Logistic Regression":
             importances = pd.Series(np.abs(model.named_steps['logisticregression'].coef_[0]), index=selected_features)
-        else:  # SVM
+        elif clf_name == "Decision Tree":
+            importances = pd.Series(model.feature_importances_, index=selected_features)
+        elif clf_name == "SVM":
             importances = pd.Series(np.abs(model.named_steps['svc'].coef_[0]), index=selected_features)
-        
+        else:  # K-Neighbors
+            importances = pd.Series(0, index=selected_features)  # No intrinsic feature importance
+            
         # Update feature importance
         full_importances = pd.Series(0.0, index=X.columns)
         full_importances[selected_features] = importances
@@ -97,24 +116,31 @@ for clf_name, clf_info in classifiers.items():
         
         # Predictions
         y_pred = model.predict(X_test_selected)
-        y_proba = model.predict_proba(X_test_selected)[:,1] if hasattr(model, "predict_proba") else model.decision_function(X_test_selected)
         
-        # Store metrics
+        # Handle probability estimation
+        if hasattr(model, "predict_proba"):
+            y_proba = model.predict_proba(X_test_selected)[:, 1]
+        else:
+            y_proba = model.decision_function(X_test_selected)
+            y_proba = (y_proba - y_proba.min()) / (y_proba.max() - y_proba.min())
+        
+        # Calculate metrics
         fold_metrics = calculate_metrics(y_test, y_pred, y_proba)
         for metric in metrics_history:
             metrics_history[metric].append(fold_metrics[metric])
         confusion_matrices.append(fold_metrics['Confusion_Matrix'])
-    
+
     # Print performance metrics
     print("\nAverage Performance Metrics:")
     for metric in metrics_history:
         print(f"{metric}: {np.mean(metrics_history[metric]):.3f} ± {np.std(metrics_history[metric]):.3f}")
-
-    # Print top 5 features
-    print("\nTop 5 Most Important Features:")
-    avg_importance = (feature_importance / 10).sort_values(ascending=False)
-    for feature, importance in avg_importance.head(5).items():
-        print(f"{feature}: {importance:.4f}")
+    
+    # Print top 5 features (except for K-Neighbors)
+    if clf_name != "K-Neighbors":
+        print("\nTop 5 Features:")
+        avg_importance = (feature_importance / 10).sort_values(ascending=False)
+        for feature, importance in avg_importance.head(5).items():
+            print(f"{feature}: {importance:.4f}")
 
     # Print confusion matrix
     print("\nAggregated Confusion Matrix:")
