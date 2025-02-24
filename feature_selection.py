@@ -5,14 +5,28 @@ from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from sklearn.metrics import (accuracy_score, f1_score, roc_auc_score, 
+                            precision_score, recall_score, matthews_corrcoef,
+                            confusion_matrix)
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
+from sklearn.feature_selection import SelectFromModel
 import warnings
 
-# Suppress convergence warnings
+# Suppress warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
+def calculate_metrics(y_true, y_pred, y_proba):
+    return {
+        'Accuracy': accuracy_score(y_true, y_pred),
+        'F1': f1_score(y_true, y_pred),
+        'AUC-ROC': roc_auc_score(y_true, y_proba),
+        'Precision': precision_score(y_true, y_pred),
+        'Recall': recall_score(y_true, y_pred),
+        'MCC': matthews_corrcoef(y_true, y_pred),
+        'Confusion_Matrix': confusion_matrix(y_true, y_pred)
+    }
 
 # Load and prepare data
 data = pd.read_csv('peptide_baza_formatted.csv', sep=';', quotechar='"')
@@ -20,118 +34,88 @@ columns_to_drop = ["id", "peptide_seq", "targetcol", "hydrophobic_cornette", "sy
 X = data.drop(columns=columns_to_drop)
 y = data['targetcol']
 
-# Configure classifiers with optimized parameters
+# Configure classifiers with integrated feature selection
 classifiers = {
-    "Random Forest": RandomForestClassifier(
-        n_estimators=200,
-        max_depth=10,
-        random_state=42,
-        n_jobs=-1
-    ),
-    "Logistic Regression": make_pipeline(
-        StandardScaler(),
-        LogisticRegression(
-            max_iter=5000,
-            class_weight='balanced',
-            solver='saga',
-            penalty='l1',
-            C=0.1,
-            random_state=42,
-            n_jobs=-1
-        )
-    ),
-    "SVM": make_pipeline(
-        StandardScaler(),
-        SVC(
-            kernel='linear',
-            probability=True,
-            class_weight='balanced',
-            random_state=42,
-            C=0.5,
-            max_iter=1000,
-            shrinking=True
-        )
-    )
+    "Random Forest": {
+        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
+        'selector': SelectFromModel(RandomForestClassifier(n_estimators=100), max_features=5)
+    },
+    "Logistic Regression": {
+        'model': make_pipeline(
+            StandardScaler(),
+            LogisticRegression(max_iter=5000, class_weight='balanced', 
+                             solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1)
+        ),
+        'selector': SelectFromModel(LogisticRegression(), max_features=5)
+    },
+    "SVM": {
+        'model': make_pipeline(
+            StandardScaler(),
+            SVC(kernel='linear', probability=True, class_weight='balanced',
+                C=0.5, max_iter=1000, shrinking=True, random_state=42)
+        ),
+        'selector': SelectFromModel(RandomForestClassifier(n_estimators=100), max_features=5)
+    }
 }
 
-# Configure cross-validation
 kf = KFold(n_splits=10, shuffle=True, random_state=42)
 
-# Store feature importance rankings
-feature_importance = {
-    "Random Forest": pd.Series(0, index=X.columns),
-    "Logistic Regression": pd.Series(0, index=X.columns),
-    "SVM": pd.Series(0, index=X.columns)
-}
-
-for clf_name, clf in classifiers.items():
+for clf_name, clf_info in classifiers.items():
     print(f"\n{'='*40}\nEvaluating {clf_name}\n{'='*40}")
     
-    fold_metrics = {'Accuracy': [], 'F1-Score': [], 'AUC-ROC': []}
+    metrics_history = {metric: [] for metric in ['Accuracy', 'F1', 'AUC-ROC', 'Precision', 'Recall', 'MCC']}
+    feature_importance = pd.Series(0.0, index=X.columns)
+    confusion_matrices = []
     
     for fold, (train_idx, test_idx) in enumerate(kf.split(X), 1):
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
         y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
         
-        # Feature selection and importance handling for SVM
-        if clf_name == "SVM":
-            # Preselect features using Random Forest
-            rf = RandomForestClassifier(n_estimators=100, random_state=42)
-            rf.fit(X_train, y_train)
-            top_features = X.columns[np.argsort(rf.feature_importances_)[-50:]]
-            
-            # Train SVM on selected features
-            fitted_model = clf.fit(X_train[top_features], y_train)
-            
-            # Extract coefficients and map to original features
-            coefs = np.abs(fitted_model.named_steps['svc'].coef_[0])
-            importances = pd.Series(0.0, index=X.columns)
-            importances[top_features] = coefs.astype(float)  # Explicit float conversion
-            
-            # Make predictions on modified test set
-            y_pred = clf.predict(X_test[top_features])
-            y_proba = clf.decision_function(X_test[top_features])
-            
-        else:
-            # Standard training for other models
-            fitted_model = clf.fit(X_train, y_train)
-            y_pred = clf.predict(X_test)
-            y_proba = clf.predict_proba(X_test)[:, 1] if hasattr(clf, "predict_proba") else [0]*len(y_test)
-            
-            # Extract feature importances
-            if clf_name == "Random Forest":
-                importances = fitted_model.feature_importances_
-            elif clf_name == "Logistic Regression":
-                importances = np.abs(fitted_model.named_steps['logisticregression'].coef_[0])
+        # Feature selection
+        selector = clf_info['selector'].fit(X_train, y_train)
+        X_train_selected = selector.transform(X_train)
+        X_test_selected = selector.transform(X_test)
         
-        # Store feature importances (handle SVM separately)
-        if clf_name != "SVM":
-            feature_importance[clf_name] += pd.Series(importances, index=X.columns)
-        else:
-            feature_importance[clf_name] += importances
+        # Get selected feature indices
+        selected_features = X.columns[selector.get_support()]
         
-        # Handle probability scaling for SVM
-        if clf_name == "SVM":
-            y_proba = (y_proba - y_proba.min()) / (y_proba.max() - y_proba.min())
+        # Model training
+        model = clf_info['model'].fit(X_train_selected, y_train)
         
-        # Calculate metrics
-        fold_metrics['Accuracy'].append(accuracy_score(y_test, y_pred))
-        fold_metrics['F1-Score'].append(f1_score(y_test, y_pred))
-        fold_metrics['AUC-ROC'].append(roc_auc_score(y_test, y_proba))
-
-    # Print performance metrics
-    print(f"Average Accuracy: {np.mean(fold_metrics['Accuracy']):.3f}")
-    print(f"Average F1-score: {np.mean(fold_metrics['F1-Score']):.3f}")
-    print(f"Average AUC-ROC: {np.mean(fold_metrics['AUC-ROC']):.3f}")
+        # Feature importance extraction
+        if clf_name == "Random Forest":
+            importances = pd.Series(model.feature_importances_, index=selected_features)
+        elif clf_name == "Logistic Regression":
+            importances = pd.Series(np.abs(model.named_steps['logisticregression'].coef_[0]), index=selected_features)
+        else:  # SVM
+            importances = pd.Series(np.abs(model.named_steps['svc'].coef_[0]), index=selected_features)
+        
+        # Update feature importance
+        full_importances = pd.Series(0.0, index=X.columns)
+        full_importances[selected_features] = importances
+        feature_importance += full_importances
+        
+        # Predictions
+        y_pred = model.predict(X_test_selected)
+        y_proba = model.predict_proba(X_test_selected)[:,1] if hasattr(model, "predict_proba") else model.decision_function(X_test_selected)
+        
+        # Store metrics
+        fold_metrics = calculate_metrics(y_test, y_pred, y_proba)
+        for metric in metrics_history:
+            metrics_history[metric].append(fold_metrics[metric])
+        confusion_matrices.append(fold_metrics['Confusion_Matrix'])
     
+    # Print performance metrics
+    print("\nAverage Performance Metrics:")
+    for metric in metrics_history:
+        print(f"{metric}: {np.mean(metrics_history[metric]):.3f} ± {np.std(metrics_history[metric]):.3f}")
+
     # Print top 5 features
-    print("\nTop 5 Features:")
-    avg_importance = feature_importance[clf_name] / 10
-    for feature, importance in avg_importance.nlargest(5).items():
+    print("\nTop 5 Most Important Features:")
+    avg_importance = (feature_importance / 10).sort_values(ascending=False)
+    for feature, importance in avg_importance.head(5).items():
         print(f"{feature}: {importance:.4f}")
 
-print("\n" + "="*50)
-print("Feature Importance Summary:")
-for model in classifiers:
-    print(f"\n{model}:")
-    print(feature_importance[model].nlargest(5).to_string())
+    # Print confusion matrix
+    print("\nAggregated Confusion Matrix:")
+    print(np.sum(confusion_matrices, axis=0))
