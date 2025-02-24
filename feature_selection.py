@@ -26,16 +26,16 @@ classifiers = {
         n_estimators=200,
         max_depth=10,
         random_state=42,
-        n_jobs=-1  # Enable parallel processing
+        n_jobs=-1
     ),
     "Logistic Regression": make_pipeline(
         StandardScaler(),
         LogisticRegression(
             max_iter=5000,
             class_weight='balanced',
-            solver='saga',  # Better for large datasets
-            penalty='l1',  # L1 regularization for feature selection
-            C=0.1,  # Stronger regularization
+            solver='saga',
+            penalty='l1',
+            C=0.1,
             random_state=42,
             n_jobs=-1
         )
@@ -47,9 +47,9 @@ classifiers = {
             probability=True,
             class_weight='balanced',
             random_state=42,
-            C=0.5,  # Regularization parameter
-            max_iter=1000,  # Increased iteration limit
-            shrinking=True  # Enable shrinking heuristic
+            C=0.5,
+            max_iter=1000,
+            shrinking=True
         )
     )
 }
@@ -73,40 +73,46 @@ for clf_name, clf in classifiers.items():
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
         y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
         
-
-        # TODO: ADD THE MODIFIED SVM SECTION
-        # Feature selection for SVM
+        # Feature selection and importance handling for SVM
         if clf_name == "SVM":
-            # Pre-select top 50 features using Random Forest
+            # Preselect features using Random Forest
             rf = RandomForestClassifier(n_estimators=100, random_state=42)
             rf.fit(X_train, y_train)
             top_features = X.columns[np.argsort(rf.feature_importances_)[-50:]]
-            X_train = X_train[top_features]
-            X_test = X_test[top_features]
-        
-        # Model training
-        fitted_model = clf.fit(X_train, y_train)
-        
-        # Feature importance extraction
-        if clf_name == "Random Forest":
-            importances = fitted_model.feature_importances_
-        elif clf_name == "Logistic Regression":
-            importances = np.abs(fitted_model.named_steps['logisticregression'].coef_[0])
+            
+            # Train SVM on selected features
+            fitted_model = clf.fit(X_train[top_features], y_train)
+            
+            # Extract coefficients and map to original features
+            coefs = np.abs(fitted_model.named_steps['svc'].coef_[0])
+            importances = pd.Series(0, index=X.columns)
+            importances[top_features] = coefs
+            
+            # Make predictions on modified test set
+            y_pred = clf.predict(X_test[top_features])
+            y_proba = clf.decision_function(X_test[top_features])
+            
         else:
-            importances = np.abs(fitted_model.named_steps['svc'].coef_[0])
+            # Standard training for other models
+            fitted_model = clf.fit(X_train, y_train)
+            y_pred = clf.predict(X_test)
+            y_proba = clf.predict_proba(X_test)[:, 1] if hasattr(clf, "predict_proba") else [0]*len(y_test)
+            
+            # Extract feature importances
+            if clf_name == "Random Forest":
+                importances = fitted_model.feature_importances_
+            elif clf_name == "Logistic Regression":
+                importances = np.abs(fitted_model.named_steps['logisticregression'].coef_[0])
         
-        # Store feature importances
-        feature_importance[clf_name] += pd.Series(importances, index=X.columns)
+        # Store feature importances (handle SVM separately)
+        if clf_name != "SVM":
+            feature_importance[clf_name] += pd.Series(importances, index=X.columns)
+        else:
+            feature_importance[clf_name] += importances
         
-        # Predictions
-        y_pred = clf.predict(X_test)
-        
-        # Handle probability estimation for SVM
+        # Handle probability scaling for SVM
         if clf_name == "SVM":
-            y_proba = clf.decision_function(X_test)
             y_proba = (y_proba - y_proba.min()) / (y_proba.max() - y_proba.min())
-        else:
-            y_proba = clf.predict_proba(X_test)[:, 1]
         
         # Calculate metrics
         fold_metrics['Accuracy'].append(accuracy_score(y_test, y_pred))
