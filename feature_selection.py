@@ -85,8 +85,8 @@ for clf_name, clf in classifiers.items():
             
             # Extract coefficients and map to original features
             coefs = np.abs(fitted_model.named_steps['svc'].coef_[0])
-            importances = pd.Series(0, index=X.columns)
-            importances[top_features] = coefs
+            importances = pd.Series(0.0, index=X.columns)
+            importances[top_features] = coefs.astype(float)  # Explicit float conversion
             
             # Make predictions on modified test set
             y_pred = clf.predict(X_test[top_features])
