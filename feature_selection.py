@@ -7,6 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import (
     accuracy_score, f1_score, roc_auc_score,
     precision_score, recall_score, matthews_corrcoef,
@@ -14,7 +15,7 @@ from sklearn.metrics import (
 )
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.feature_selection import SelectFromModel, SelectKBest
+from sklearn.feature_selection import SelectFromModel, SelectKBest, f_classif
 from skrebate import ReliefF
 import warnings
 
@@ -40,7 +41,7 @@ X = data.drop(columns=columns_to_drop)
 y = data['targetcol']
 
 # Define classifiers with integrated feature selection.
-# Note: For SVM we integrate feature selection via SelectKBest inside the pipeline.
+# For SVM we integrate feature selection via SelectKBest inside the pipeline.
 classifiers = {
     "Random Forest": {
         'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
@@ -60,10 +61,10 @@ classifiers = {
     "SVM": {
         'model': Pipeline([
             ('scaler', StandardScaler()),
-            ('selectkbest', SelectKBest(k=20)),  # internal feature selection step
+            ('selectkbest', SelectKBest(k=20)),
             ('svc', SVC(kernel='linear', C=0.5, probability=True, random_state=42))
         ]),
-        'selector': None  # No external selector is used.
+        'selector': None  # No external selector; use pipeline's internal selector.
     },
     "K-Neighbors": {
         'model': Pipeline([
@@ -75,6 +76,13 @@ classifiers = {
     "Decision Tree": {
         'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
         'selector': SelectFromModel(DecisionTreeClassifier(random_state=42), max_features=5)
+    },
+    "Naive Bayes": {
+        'model': make_pipeline(
+            StandardScaler(),
+            GaussianNB()
+        ),
+        'selector': SelectKBest(score_func=f_classif, k=5)
     }
 }
 
@@ -87,14 +95,15 @@ feature_importance_dict = {
     "Logistic Regression": pd.Series(0.0, index=X.columns),
     "SVM": pd.Series(0.0, index=X.columns),
     "K-Neighbors": pd.Series(0.0, index=X.columns),
-    "Decision Tree": pd.Series(0.0, index=X.columns)
+    "Decision Tree": pd.Series(0.0, index=X.columns),
+    "Naive Bayes": pd.Series(0.0, index=X.columns)
 }
 
 for clf_name, clf_info in classifiers.items():
     print(f"\n{'='*40}\nEvaluating {clf_name}\n{'='*40}")
     
     metrics_history = {metric: [] for metric in ['Accuracy', 'F1', 'AUC-ROC', 'Precision', 'Recall', 'MCC']}
-    # Accumulate per-fold feature importance
+    # Accumulate per-fold feature importance for this classifier.
     model_feature_importance = pd.Series(0.0, index=X.columns)
     confusion_matrices = []
     
@@ -103,18 +112,26 @@ for clf_name, clf_info in classifiers.items():
         y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
         
         if clf_info['selector'] is not None:
-            # Use external selector branch (works for Random Forest, Logistic Regression, Decision Tree, and ReliefF for K-Neighbors)
+            # Use external selector branch.
+            # For ReliefF (used with K-Neighbors), work with numpy arrays.
             if isinstance(clf_info['selector'], ReliefF):
-                # For ReliefF, convert to numpy arrays.
                 selector = clf_info['selector'].fit(X_train.values, y_train.values)
                 X_train_selected = selector.transform(X_train.values)
                 X_test_selected = selector.transform(X_test.values)
-                # ReliefF stores top feature indices in its top_features_
                 selected_indices = selector.top_features_[:selector.n_features_to_select]
                 selected_features = X.columns[selected_indices]
                 model = clf_info['model'].fit(X_train_selected, y_train.values)
                 relief_scores = selector.feature_importances_
                 importances = pd.Series(relief_scores, index=X.columns).loc[selected_features]
+            # For Naive Bayes, use SelectKBest and extract scores.
+            elif clf_name == "Naive Bayes":
+                selector = clf_info['selector'].fit(X_train, y_train)
+                X_train_selected = selector.transform(X_train)
+                X_test_selected = selector.transform(X_test)
+                selected_features = X.columns[selector.get_support()]
+                model = clf_info['model'].fit(X_train_selected, y_train)
+                importances = pd.Series(selector.scores_[selector.get_support()],
+                                        index=selected_features)
             else:
                 selector = clf_info['selector'].fit(X_train, y_train)
                 X_train_selected = selector.transform(X_train)
@@ -137,21 +154,20 @@ for clf_name, clf_info in classifiers.items():
             full_importances[selected_features] = importances.values
             model_feature_importance += full_importances
         else:
-            # SVM branch: use the integrated selector.
+            # For SVM, use the integrated selector in the pipeline.
             model = clf_info['model'].fit(X_train, y_train)
             internal_selector = model.named_steps['selectkbest']
             selected_mask = internal_selector.get_support()
             selected_features = X.columns[selected_mask]
+            # Let the pipeline process full X_test.
             svm_model = model.named_steps['svc']
             importances = pd.Series(np.abs(svm_model.coef_[0]), index=selected_features)
             full_importances = pd.Series(0.0, index=X.columns)
             full_importances[selected_features] = importances.values
             model_feature_importance += full_importances
-            # IMPORTANT: For prediction, pass full X_test as numpy array to ensure
-            # the pipeline's internal transformations work properly.
-            X_test_selected = X_test.values
+            X_test_selected = X_test.values  # Pass numpy array to match pipeline's expected input.
         
-        # Get predictions and probabilities.
+        # For prediction, ensure the input matches the shape expected.
         y_pred = model.predict(X_test_selected)
         if hasattr(model, "predict_proba"):
             y_proba = model.predict_proba(X_test_selected)[:, 1]
@@ -185,29 +201,30 @@ for model_name, imp_series in feature_importance_dict.items():
     print(imp_series.nlargest(5).to_string())
 
 
+
 """
 ========================================
 Evaluating Random Forest
 ========================================
 
 Average Performance Metrics:
-Accuracy: 0.868 ± 0.012
-F1: 0.928 ± 0.007
+Accuracy: 0.868 ± 0.013
+F1: 0.928 ± 0.008
 AUC-ROC: 0.721 ± 0.025
 Precision: 0.882 ± 0.014
 Recall: 0.979 ± 0.013
-MCC: 0.209 ± 0.072
+MCC: 0.205 ± 0.092
 
 Top 5 Features:
 hydrophobic_janin: 0.0306
-hydrophobic_eisenberg: 0.0266
+hydrophobic_eisenberg: 0.0266     
 hydrophobic_kyte-doolittle: 0.0214
 charge: 0.0115
 boman: 0.0091
 
-Aggregated Confusion Matrix:
-[[  31  201]
- [  33 1506]]
+Aggregated Confusion Matrix:      
+[[  30  202]
+ [  32 1507]]
 
 ========================================
 Evaluating Logistic Regression
@@ -301,15 +318,38 @@ Aggregated Confusion Matrix:
 [[  37  195]
  [  48 1491]]
 
+========================================
+Evaluating Naive Bayes
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.819 ± 0.020
+F1: 0.894 ± 0.013
+AUC-ROC: 0.734 ± 0.033
+Precision: 0.911 ± 0.011
+Recall: 0.878 ± 0.026
+MCC: 0.281 ± 0.076
+
+Top 5 Features:
+non-polar_group: 141.3439
+hydrophobic_janin: 133.5812
+hydrophobic_kyte-doolittle: 127.8940
+acidic_group: 114.8418
+hydrophobic_eisenberg: 74.5839
+
+Aggregated Confusion Matrix:
+[[ 100  132]
+ [ 188 1351]]
+
 ==================================================
 Feature Importance Summary:
 
 Random Forest:
-hydrophobic_janin             0.305918
-hydrophobic_eisenberg         0.265712
-hydrophobic_kyte-doolittle    0.213787
-charge                        0.114818
-boman                         0.090596
+hydrophobic_janin             0.305967
+hydrophobic_eisenberg         0.266446
+hydrophobic_kyte-doolittle    0.213549
+charge                        0.114613
+boman                         0.090978
 
 Logistic Regression:
 non-polar_group    7.482911
@@ -338,4 +378,11 @@ non-polar_group          1.373169
 peptide_len              1.067677
 isoelectric_point        0.885713
 hydrophobic_eisenberg    0.564833
+
+Naive Bayes:
+non-polar_group               1413.438901
+hydrophobic_janin             1335.811507
+hydrophobic_kyte-doolittle    1278.939943
+acidic_group                  1148.417748
+hydrophobic_eisenberg          745.839406
 """
