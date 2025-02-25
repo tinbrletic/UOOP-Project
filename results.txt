@@ -1,0 +1,221 @@
+========================================
+Evaluating Random Forest
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.868 ± 0.013
+F1: 0.928 ± 0.008
+AUC-ROC: 0.721 ± 0.025
+Precision: 0.882 ± 0.014
+Recall: 0.979 ± 0.013
+MCC: 0.205 ± 0.092
+
+Top 5 Features:
+hydrophobic_janin: 0.0306
+hydrophobic_eisenberg: 0.0266     
+hydrophobic_kyte-doolittle: 0.0214
+charge: 0.0115
+boman: 0.0091
+
+Aggregated Confusion Matrix:      
+[[  30  202]
+ [  32 1507]]
+
+========================================
+Evaluating Logistic Regression
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.707 ± 0.043
+F1: 0.809 ± 0.035
+AUC-ROC: 0.705 ± 0.046
+Precision: 0.925 ± 0.008
+Recall: 0.721 ± 0.052
+MCC: 0.241 ± 0.056
+
+Top 5 Features:
+non-polar_group: 0.7483
+X8_PP: 0.1567
+X8_IV: 0.1418
+X8_GY: 0.1266
+X4_H: 0.1241
+
+Aggregated Confusion Matrix:
+[[ 142   90]
+ [ 429 1110]]
+
+========================================
+Evaluating SVM
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.869 ± 0.013
+F1: 0.930 ± 0.007
+AUC-ROC: 0.653 ± 0.071
+Precision: 0.869 ± 0.013
+Recall: 1.000 ± 0.000
+MCC: 0.000 ± 0.000
+
+Top 5 Features:
+polar_group: 0.0012
+boman: 0.0012
+hydrophobic_engleman: 0.0009
+aliphatic_index: 0.0007
+non-polar_group: 0.0005
+
+Aggregated Confusion Matrix:
+[[   0  232]
+ [   0 1539]]
+
+========================================
+Evaluating K-Neighbors
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.873 ± 0.014
+F1: 0.931 ± 0.008
+AUC-ROC: 0.692 ± 0.048
+Precision: 0.882 ± 0.014
+Recall: 0.986 ± 0.010
+MCC: 0.214 ± 0.111
+
+Top 5 Features:
+non-polar_group: 0.1798
+polar_group: 0.1291
+X5_A: 0.1225
+hydrophobic_janin: 0.1198
+tiny_group: 0.0567
+
+Aggregated Confusion Matrix:
+[[  28  204]
+ [  21 1518]]
+
+========================================
+Evaluating Decision Tree
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.863 ± 0.012
+F1: 0.925 ± 0.007
+AUC-ROC: 0.711 ± 0.034
+Precision: 0.884 ± 0.014
+Recall: 0.969 ± 0.007
+MCC: 0.202 ± 0.060
+
+Top 5 Features:
+hydrophobic_janin: 0.3524
+non-polar_group: 0.1373
+peptide_len: 0.1068
+isoelectric_point: 0.0886
+hydrophobic_eisenberg: 0.0565
+
+Aggregated Confusion Matrix:
+[[  37  195]
+ [  48 1491]]
+
+========================================
+Evaluating Naive Bayes
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.819 ± 0.020
+F1: 0.894 ± 0.013
+AUC-ROC: 0.734 ± 0.033
+Precision: 0.911 ± 0.011
+Recall: 0.878 ± 0.026
+MCC: 0.281 ± 0.076
+
+Top 5 Features:
+non-polar_group: 141.3439
+hydrophobic_janin: 133.5812
+hydrophobic_kyte-doolittle: 127.8940
+acidic_group: 114.8418
+hydrophobic_eisenberg: 74.5839
+
+Aggregated Confusion Matrix:
+[[ 100  132]
+ [ 188 1351]]
+
+==================================================
+Feature Importance Summary:
+
+Random Forest:
+hydrophobic_janin             0.305967
+hydrophobic_eisenberg         0.266446
+hydrophobic_kyte-doolittle    0.213549
+charge                        0.114613
+boman                         0.090978
+
+Logistic Regression:
+non-polar_group    7.482911
+X8_PP              1.566854
+X8_IV              1.417787
+X8_GY              1.265853
+X4_H               1.240733
+
+SVM:
+polar_group             0.012466
+boman                   0.012466
+hydrophobic_engleman    0.009440
+aliphatic_index         0.006698
+non-polar_group         0.005219
+
+K-Neighbors:
+non-polar_group      1.798132
+polar_group          1.290985
+X5_A                 1.224701
+hydrophobic_janin    1.197976
+tiny_group           0.567266
+
+Decision Tree:
+hydrophobic_janin        3.523718
+non-polar_group          1.373169
+peptide_len              1.067677
+isoelectric_point        0.885713
+hydrophobic_eisenberg    0.564833
+
+Naive Bayes:
+non-polar_group               1413.438901
+hydrophobic_janin             1335.811507
+hydrophobic_kyte-doolittle    1278.939943
+acidic_group                  1148.417748
+hydrophobic_eisenberg          745.839406
+
+
+fs_seq.py
+
+Model: Logistic Regression | Scoring: precision
+Selected features: ['basic_group', 'X4_C', 'X4_D', 'X4_E', 'X8_SY']
+PRECISION Score: 0.8493278651173388
+
+Model: Logistic Regression | Scoring: recall
+Selected features: ['X4_M', 'X8_CH', 'X8_CL', 'X8_CM', 'X8_DQ']
+RECALL Score: 0.8721804511278195
+
+Model: Logistic Regression | Scoring: mcc
+Selected features: ['non-polar_group', 'X8_FF', 'X8_IV', 'X8_KL', 'X8_TL']
+MCC Score: 0.29511102317230836
+
+Model: Random Forest | Scoring: accuracy
+Selected features: ['X5_Q', 'X8_LL', 'X8_VE', 'X8_VS', 'X8_VV']
+ACCURACY Score: 0.8740601503759399
+
+Model: Random Forest | Scoring: f1
+Selected features: ['X5_Q', 'X8_LL', 'X8_VE', 'X8_VS', 'X8_VV']
+F1 Score: 0.820533526062294
+
+Model: Random Forest | Scoring: roc_auc
+Selected features: ['acidic_group', 'X8_DK', 'X8_EP', 'X8_KG', 'X8_MR']
+ROC_AUC Score: 0.7587791582150101
+
+Model: Random Forest | Scoring: precision
+Selected features: ['charge', 'polar_group', 'X4_A', 'X8_AG', 'X8_LS']
+PRECISION Score: 0.8534774436090226
+
+Model: Random Forest | Scoring: recall
+Selected features: ['aliphatic_group', 'X4_E', 'X4_I', 'X4_K', 'X4_L']
+RECALL Score: 0.8721804511278195
+
+Model: Random Forest | Scoring: mcc
+Selected features: ['peptide_len', 'polar_group', 'X8_AT', 'X8_AW', 'X8_DH']
+MCC Score: 0.26002548374617185
