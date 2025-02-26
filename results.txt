@@ -182,6 +182,191 @@ acidic_group                  1148.417748
 hydrophobic_eisenberg          745.839406
 
 
+Feature Selection vol.2 - added stratified repeated cross validation
+========================================
+Evaluating Random Forest
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.869 ± 0.013
+F1: 0.929 ± 0.007
+AUC-ROC: 0.716 ± 0.057
+Precision: 0.882 ± 0.009
+Recall: 0.980 ± 0.012
+MCC: 0.199 ± 0.114
+
+Top 5 Features:
+hydrophobic_janin: 0.3126
+hydrophobic_eisenberg: 0.2684
+hydrophobic_kyte-doolittle: 0.2133
+charge: 0.1392
+boman: 0.1060
+
+Aggregated Confusion Matrix:
+[[  300  2020]
+ [  303 15087]]
+
+========================================
+Evaluating Logistic Regression
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.707 ± 0.037
+F1: 0.810 ± 0.028
+AUC-ROC: 0.704 ± 0.067
+Precision: 0.925 ± 0.019
+Recall: 0.721 ± 0.046
+MCC: 0.239 ± 0.081
+
+Top 5 Features:
+non-polar_group: 7.1590
+X8_IV: 1.4991
+X8_PP: 1.4855
+X4_H: 1.2539
+X8_GY: 1.0480
+
+Aggregated Confusion Matrix:
+[[ 1416   904]
+ [ 4292 11098]]
+
+========================================
+Evaluating SVM
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.874 ± 0.009
+F1: 0.932 ± 0.005
+AUC-ROC: 0.658 ± 0.064
+Precision: 0.878 ± 0.006
+Recall: 0.994 ± 0.006
+MCC: 0.191 ± 0.114
+
+Top 5 Features:
+non-polar_group: 1414.0564
+hydrophobic_janin: 1336.8678
+hydrophobic_kyte-doolittle: 1279.5630
+acidic_group: 1149.1209
+hydrophobic_eisenberg: 779.9467
+
+Aggregated Confusion Matrix:
+[[  187  2133]
+ [   96 15294]]
+
+========================================
+Evaluating K-Neighbors
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.871 ± 0.011
+F1: 0.930 ± 0.006
+AUC-ROC: 0.690 ± 0.055
+Precision: 0.880 ± 0.008
+Recall: 0.986 ± 0.009
+MCC: 0.197 ± 0.114
+
+Top 5 Features:
+non-polar_group: 1.8028
+polar_group: 1.2830
+X5_A: 1.2012
+hydrophobic_janin: 1.1560
+tiny_group: 0.5016
+
+Aggregated Confusion Matrix:
+[[  257  2063]
+ [  217 15173]]
+
+========================================
+Evaluating Decision Tree
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.863 ± 0.016
+F1: 0.924 ± 0.010
+AUC-ROC: 0.726 ± 0.051
+Precision: 0.885 ± 0.010
+Recall: 0.967 ± 0.020
+MCC: 0.207 ± 0.109
+
+Top 5 Features:
+hydrophobic_janin: 3.3445
+peptide_len: 1.3012
+non-polar_group: 1.1932
+charge: 1.1707
+hydrophobic_eisenberg: 0.5849
+
+Aggregated Confusion Matrix:
+[[  390  1930]
+ [  504 14886]]
+
+========================================
+Evaluating Naive Bayes
+========================================
+
+Average Performance Metrics:
+Accuracy: 0.817 ± 0.026
+F1: 0.892 ± 0.016
+AUC-ROC: 0.735 ± 0.055
+Precision: 0.911 ± 0.014
+Recall: 0.875 ± 0.027
+MCC: 0.279 ± 0.085
+
+Top 5 Features:
+non-polar_group: 1414.0564
+hydrophobic_janin: 1336.8678
+hydrophobic_kyte-doolittle: 1279.5630
+acidic_group: 1149.1209
+hydrophobic_eisenberg: 779.9467
+
+Aggregated Confusion Matrix:
+[[ 1003  1317]
+ [ 1931 13459]]
+
+==================================================
+Feature Importance Summary:
+
+Random Forest:
+hydrophobic_janin             3.125628
+hydrophobic_eisenberg         2.684091
+hydrophobic_kyte-doolittle    2.133093
+charge                        1.391724
+boman                         1.060146
+
+Logistic Regression:
+non-polar_group    71.589920
+X8_IV              14.990937
+X8_PP              14.854796
+X4_H               12.538906
+X8_GY              10.479876
+
+SVM:
+non-polar_group               14140.564482
+hydrophobic_janin             13368.678248
+hydrophobic_kyte-doolittle    12795.630436
+acidic_group                  11491.208727
+hydrophobic_eisenberg          7799.466958
+
+K-Neighbors:
+non-polar_group      18.028041
+polar_group          12.829989
+X5_A                 12.011786
+hydrophobic_janin    11.559690
+tiny_group            5.015638
+
+Decision Tree:
+hydrophobic_janin        33.445072
+peptide_len              13.011682
+non-polar_group          11.931576
+charge                   11.707400
+hydrophobic_eisenberg     5.849174
+
+Naive Bayes:
+non-polar_group               14140.564482
+hydrophobic_janin             13368.678248
+hydrophobic_kyte-doolittle    12795.630436
+acidic_group                  11491.208727
+hydrophobic_eisenberg          7799.466958
+
+
 fs_seq.py
 
 Model: Logistic Regression | Scoring: precision

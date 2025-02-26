@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, RepeatedStratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -47,17 +47,17 @@ classifiers = {
         'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
         'selector': SelectFromModel(RandomForestClassifier(n_estimators=100, random_state=42), max_features=5)
     },
-    # "Logistic Regression": {
-    #     'model': make_pipeline(
-    #         StandardScaler(),
-    #         LogisticRegression(max_iter=5000, class_weight='balanced',
-    #                            solver='saga', penalty='l1', C=0.1,
-    #                            random_state=42, n_jobs=-1)
-    #     ),
-    #     'selector': SelectFromModel(
-    #         LogisticRegression(penalty='l1', solver='saga', max_iter=5000, random_state=42),
-    #         max_features=5)
-    # }, # za svm knn i naiive bayes nismo direktno imali preko modela feature selection nego smo koristili vanjski selektor jer kod njih 
+    "Logistic Regression": {
+        'model': make_pipeline(
+            StandardScaler(),
+            LogisticRegression(max_iter=5000, class_weight='balanced',
+                               solver='saga', penalty='l1', C=0.1,
+                               random_state=42, n_jobs=-1)
+        ),
+        'selector': SelectFromModel(
+            LogisticRegression(penalty='l1', solver='saga', max_iter=5000, random_state=42),
+            max_features=5)
+    }, # za svm knn i naiive bayes nismo direktno imali preko modela feature selection nego smo koristili vanjski selektor jer kod njih 
     "SVM": {
         'model': Pipeline([
             ('scaler', StandardScaler()),
@@ -68,7 +68,7 @@ classifiers = {
     },
     "K-Neighbors": {
         'model': Pipeline([
-            ('scaler', RobustScaler()),
+            ('scaler', StandardScaler()),
             ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
         ]),
         'selector': ReliefF(n_features_to_select=5, n_neighbors=20, n_jobs=-1)
@@ -87,7 +87,8 @@ classifiers = {
 }
 
 # Configure cross-validation
-kf = KFold(n_splits=10, shuffle=True, random_state=42) # TODO: set repeated stratified kfold
+#kf = KFold(n_splits=10, shuffle=True, random_state=42) # TODO: set repeated stratified kfold
+kf = RepeatedStratifiedKFold(n_splits=10, n_repeats=10, random_state=42)
 
 # Global feature importance dictionary for all classifiers
 feature_importance_dict = {
@@ -107,7 +108,7 @@ for clf_name, clf_info in classifiers.items():
     model_feature_importance = pd.Series(0.0, index=X.columns)
     confusion_matrices = []
     
-    for fold, (train_idx, test_idx) in enumerate(kf.split(X), 1):
+    for fold, (train_idx, test_idx) in enumerate(kf.split(X, y), 1):
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
         y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
         
