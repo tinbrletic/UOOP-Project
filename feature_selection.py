@@ -47,22 +47,22 @@ classifiers = {
         'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
         'selector': SelectFromModel(RandomForestClassifier(n_estimators=100, random_state=42), max_features=5)
     },
-    "Logistic Regression": {
-        'model': make_pipeline(
-            StandardScaler(),
-            LogisticRegression(max_iter=5000, class_weight='balanced',
-                               solver='saga', penalty='l1', C=0.1,
-                               random_state=42, n_jobs=-1)
-        ),
-        'selector': SelectFromModel(
-            LogisticRegression(penalty='l1', solver='saga', max_iter=5000, random_state=42),
-            max_features=5)
-    },
+    # "Logistic Regression": {
+    #     'model': make_pipeline(
+    #         StandardScaler(),
+    #         LogisticRegression(max_iter=5000, class_weight='balanced',
+    #                            solver='saga', penalty='l1', C=0.1,
+    #                            random_state=42, n_jobs=-1)
+    #     ),
+    #     'selector': SelectFromModel(
+    #         LogisticRegression(penalty='l1', solver='saga', max_iter=5000, random_state=42),
+    #         max_features=5)
+    # }, # za svm knn i naiive bayes nismo direktno imali preko modela feature selection nego smo koristili vanjski selektor jer kod njih 
     "SVM": {
         'model': Pipeline([
             ('scaler', StandardScaler()),
-            ('selectkbest', SelectKBest(k=20)),
-            ('svc', SVC(kernel='linear', C=0.5, probability=True, random_state=42))
+            ('selectkbest', SelectKBest(k=5)),
+            ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42)) # c=0.5
         ]),
         'selector': None  # No external selector; use pipeline's internal selector.
     },
@@ -87,7 +87,7 @@ classifiers = {
 }
 
 # Configure cross-validation
-kf = KFold(n_splits=10, shuffle=True, random_state=42)
+kf = KFold(n_splits=10, shuffle=True, random_state=42) # TODO: set repeated stratified kfold
 
 # Global feature importance dictionary for all classifiers
 feature_importance_dict = {
@@ -161,19 +161,19 @@ for clf_name, clf_info in classifiers.items():
             selected_features = X.columns[selected_mask]
             # Let the pipeline process full X_test.
             svm_model = model.named_steps['svc']
-            importances = pd.Series(np.abs(svm_model.coef_[0]), index=selected_features)
+
+            importances = pd.Series(np.abs(internal_selector.scores_[selected_mask]), index=selected_features)
             full_importances = pd.Series(0.0, index=X.columns)
             full_importances[selected_features] = importances.values
             model_feature_importance += full_importances
+            #model_feature_importance += None
             X_test_selected = X_test.values  # Pass numpy array to match pipeline's expected input.
         
         # For prediction, ensure the input matches the shape expected.
         y_pred = model.predict(X_test_selected)
-        if hasattr(model, "predict_proba"):
-            y_proba = model.predict_proba(X_test_selected)[:, 1]
-        else:
-            y_proba = model.decision_function(X_test_selected)
-            y_proba = (y_proba - y_proba.min()) / (y_proba.max() - y_proba.min())
+        
+        y_proba = model.predict_proba(X_test_selected)[:, 1]
+        
         
         fold_metrics = calculate_metrics(y_test, y_pred, y_proba)
         for metric in metrics_history:
@@ -203,6 +203,9 @@ for model_name, imp_series in feature_importance_dict.items():
 
 
 """
+
+
+
 ========================================
 Evaluating Random Forest
 ========================================
