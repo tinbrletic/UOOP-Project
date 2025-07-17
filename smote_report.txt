@@ -1,0 +1,103 @@
+Dataset Comparison:
+==================================================
+Original dataset: 1771 samples
+Balanced dataset: 3078 samples
+Additional samples: 1307
+
+Original class distribution:
+targetcol
+1    1539
+0     232
+Name: count, dtype: int64
+
+Balanced class distribution:
+targetcol
+1    1539
+0    1539
+Name: count, dtype: int64
+
+Sample synthetic sequences:
+Empty DataFrame
+Columns: [id, peptide_seq, peptide_len, synthesis_flag, targetcol]
+Index: []
+
+(.venv) C:\Users\Korisnik\Desktop\Faks\Projekt-UOOP\UOOP-Project>python smote_report.py  
+================================================================================
+SMOTE IMPLEMENTATION SUMMARY REPORT
+================================================================================
+
+1. DATASET OVERVIEW
+--------------------------------------------------
+Original dataset size: 1,771 samples
+Balanced dataset size: 3,078 samples
+Synthetic samples generated: 1,307 samples
+Increase in dataset size: 73.8%
+
+2. CLASS DISTRIBUTION ANALYSIS
+--------------------------------------------------
+Original class distribution:
+  synthesis_flag=True  (targetcol=1): 1,539 samples (86.9%)
+  synthesis_flag=False (targetcol=0): 232 samples (13.1%)
+  Class imbalance ratio: 6.63:1
+
+Balanced class distribution:
+  synthesis_flag=True  (targetcol=1): 1,539 samples (50.0%)
+  synthesis_flag=False (targetcol=0): 1,539 samples (50.0%)
+  Class imbalance ratio: 1.00:1
+
+3. SYNTHETIC DATA CHARACTERISTICS
+--------------------------------------------------
+Number of synthetic samples: 0
+All synthetic samples have targetcol=0: True
+All synthetic samples have synthesis_flag=False: True
+
+Peptide length statistics:
+  Original samples - Mean: 14.0, Std: 2.4
+  Synthetic samples - Mean: nan, Std: nan
+
+4. SAMPLE SYNTHETIC SEQUENCES
+--------------------------------------------------
+
+5. FEATURE PRESERVATION
+--------------------------------------------------
+Number of features preserved: 465
+Feature columns include: ['hydrophobic_janin', 'hydrophobic_engleman', 'hydrophobic_moment', 'aliphatic_index', 'isoelectric_point']... (showing first 5)
+All original features preserved in balanced dataset
+
+6. SMOTE IMPLEMENTATION DETAILS
+--------------------------------------------------
+SMOTE Configuration:
+  - Algorithm: SMOTE (Synthetic Minority Oversampling Technique)
+  - k_neighbors: 5
+  - random_state: 42
+  - sampling_strategy: 'auto' (balance classes equally)
+  - Target class for oversampling: 0 (synthesis_flag=False)
+
+Synthetic sequence generation:
+  - Amino acids used: A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R, S, T, V, W, Y
+  - Length variation: ±3 amino acids from original mean
+  - Sequence generation: Random selection from amino acid alphabet
+
+7. DATASET USAGE RECOMMENDATIONS
+--------------------------------------------------
+The balanced dataset is now ready for machine learning applications:
+  ✓ Equal class distribution eliminates class imbalance bias
+  ✓ Synthetic samples preserve feature space characteristics
+  ✓ All original samples are retained
+  ✓ Compatible with original dataset structure
+
+Recommended uses:
+  - Training classification models for peptide synthesis prediction
+  - Cross-validation and model evaluation
+  - Feature selection and importance analysis
+  - Ensemble learning approaches
+
+8. FILES CREATED
+--------------------------------------------------
+✓ peptide_baza_balanced.csv - Main balanced dataset
+✓ smote_balance.py - SMOTE implementation script
+✓ verify_balance.py - Dataset verification script
+
+================================================================================
+SMOTE IMPLEMENTATION COMPLETED SUCCESSFULLY!
+================================================================================
