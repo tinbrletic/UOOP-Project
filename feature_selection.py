@@ -17,6 +17,7 @@ from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.feature_selection import SelectFromModel, SelectKBest, f_classif
 from skrebate import ReliefF
+from scipy.stats import wilcoxon, mannwhitneyu, kruskal, chi2_contingency, ks_2samp
 import warnings
 import datetime
 import os
@@ -24,6 +25,8 @@ import os
 # Suppress warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
+dataset_file = 'peptide_baza_balanced.csv'
 
 def log_configuration_info():
     """Log detailed configuration information for reproducibility"""
@@ -35,7 +38,6 @@ def log_configuration_info():
     print()
     
     # Dataset information
-    dataset_file = 'peptide_baza_formatted.csv'
     if os.path.exists(dataset_file):
         file_size = os.path.getsize(dataset_file) / (1024 * 1024)  # MB
         modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(dataset_file))
@@ -154,6 +156,206 @@ def calculate_metrics(y_true, y_pred, y_proba):
         'Confusion_Matrix': confusion_matrix(y_true, y_pred)
     }
 
+def statistical_feature_selection(X, y, method='mann_whitney', top_k=10, alpha=0.05):
+    """
+    Perform statistical feature selection using various statistical tests
+    
+    Parameters:
+    X (pd.DataFrame): Feature matrix
+    y (pd.Series): Binary target variable
+    method (str): 'mann_whitney', 'wilcoxon', 'kruskal', 'chi2', or 'ks_2samp'
+    top_k (int): Number of top features to select
+    alpha (float): Significance level
+    
+    Returns:
+    tuple: (selected_features, results_dict)
+    """
+    
+    print(f"Performing {method} statistical feature selection...")
+    
+    if len(np.unique(y)) != 2:
+        raise ValueError("Statistical tests require binary classification")
+    
+    results = {}
+    unique_classes = np.unique(y)
+    
+    if method == 'mann_whitney':
+        # Mann-Whitney U test - better for independent samples
+        class_0_indices = y[y == unique_classes[0]].index
+        class_1_indices = y[y == unique_classes[1]].index
+        
+        for feature in X.columns:
+            values_0 = X.loc[class_0_indices, feature].values
+            values_1 = X.loc[class_1_indices, feature].values
+            
+            try:
+                statistic, p_value = mannwhitneyu(values_0, values_1, alternative='two-sided')
+                
+                # Calculate effect size (rank-biserial correlation)
+                n1, n2 = len(values_0), len(values_1)
+                effect_size = 1 - (2 * statistic) / (n1 * n2)
+                
+                results[feature] = {
+                    'p_value': p_value,
+                    'statistic': statistic,
+                    'significant': p_value < alpha,
+                    'effect_size': abs(effect_size)
+                }
+            except:
+                results[feature] = {'p_value': 1.0, 'statistic': 0, 'significant': False, 'effect_size': 0}
+    
+    elif method == 'wilcoxon':
+        # Wilcoxon signed rank test - adapted for independent samples
+        class_0_indices = y[y == unique_classes[0]].index
+        class_1_indices = y[y == unique_classes[1]].index
+        
+        for feature in X.columns:
+            values_0 = X.loc[class_0_indices, feature].values
+            values_1 = X.loc[class_1_indices, feature].values
+            
+            # Create paired samples by taking equal sample sizes
+            min_size = min(len(values_0), len(values_1))
+            
+            if min_size < 6:  # Need minimum samples for Wilcoxon test
+                results[feature] = {'p_value': 1.0, 'statistic': 0, 'significant': False, 'effect_size': 0}
+                continue
+            
+            # Random sampling to create pairs (reproducible)
+            np.random.seed(42)
+            if len(values_0) > min_size:
+                idx = np.random.choice(len(values_0), min_size, replace=False)
+                values_0 = values_0[idx]
+            if len(values_1) > min_size:
+                idx = np.random.choice(len(values_1), min_size, replace=False)
+                values_1 = values_1[idx]
+            
+            # Calculate differences
+            differences = values_1 - values_0
+            differences = differences[differences != 0]
+            
+            if len(differences) == 0:
+                results[feature] = {'p_value': 1.0, 'statistic': 0, 'significant': False, 'effect_size': 0}
+                continue
+            
+            try:
+                statistic, p_value = wilcoxon(differences, alternative='two-sided')
+                effect_size = np.abs(np.median(differences))
+                
+                results[feature] = {
+                    'p_value': p_value,
+                    'statistic': statistic,
+                    'significant': p_value < alpha,
+                    'effect_size': effect_size
+                }
+            except:
+                results[feature] = {'p_value': 1.0, 'statistic': 0, 'significant': False, 'effect_size': 0}
+    
+    elif method == 'kruskal':
+        # Kruskal-Wallis H test - non-parametric version of ANOVA
+        class_0_indices = y[y == unique_classes[0]].index
+        class_1_indices = y[y == unique_classes[1]].index
+        
+        for feature in X.columns:
+            values_0 = X.loc[class_0_indices, feature].values
+            values_1 = X.loc[class_1_indices, feature].values
+            
+            try:
+                statistic, p_value = kruskal(values_0, values_1)
+                
+                # Calculate effect size (eta-squared approximation)
+                n_total = len(values_0) + len(values_1)
+                effect_size = (statistic - 1) / (n_total - 1)
+                
+                results[feature] = {
+                    'p_value': p_value,
+                    'statistic': statistic,
+                    'significant': p_value < alpha,
+                    'effect_size': abs(effect_size)
+                }
+            except:
+                results[feature] = {'p_value': 1.0, 'statistic': 0, 'significant': False, 'effect_size': 0}
+    
+    elif method == 'chi2':
+        # Chi-square test for categorical features (discretized continuous features)
+        for feature in X.columns:
+            try:
+                # Discretize continuous features into bins
+                feature_values = X[feature].values
+                
+                # Create bins based on quartiles
+                quartiles = np.percentile(feature_values, [25, 50, 75])
+                discretized = np.digitize(feature_values, quartiles)
+                
+                # Create contingency table
+                contingency_table = pd.crosstab(discretized, y)
+                
+                # Ensure minimum expected frequency
+                if contingency_table.min().min() < 5:
+                    # Use fewer bins if expected frequencies are too low
+                    median_val = np.median(feature_values)
+                    discretized = (feature_values > median_val).astype(int)
+                    contingency_table = pd.crosstab(discretized, y)
+                
+                if contingency_table.min().min() >= 1:  # At least 1 in each cell
+                    chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table)
+                    
+                    # Calculate effect size (Cramér's V)
+                    n = contingency_table.sum().sum()
+                    effect_size = np.sqrt(chi2_stat / (n * (min(contingency_table.shape) - 1)))
+                    
+                    results[feature] = {
+                        'p_value': p_value,
+                        'statistic': chi2_stat,
+                        'significant': p_value < alpha,
+                        'effect_size': effect_size
+                    }
+                else:
+                    results[feature] = {'p_value': 1.0, 'statistic': 0, 'significant': False, 'effect_size': 0}
+                    
+            except:
+                results[feature] = {'p_value': 1.0, 'statistic': 0, 'significant': False, 'effect_size': 0}
+    
+    elif method == 'ks_2samp':
+        # Kolmogorov-Smirnov two-sample test
+        class_0_indices = y[y == unique_classes[0]].index
+        class_1_indices = y[y == unique_classes[1]].index
+        
+        for feature in X.columns:
+            values_0 = X.loc[class_0_indices, feature].values
+            values_1 = X.loc[class_1_indices, feature].values
+            
+            try:
+                statistic, p_value = ks_2samp(values_0, values_1)
+                
+                # KS statistic is already a measure of effect size (max difference between CDFs)
+                effect_size = statistic
+                
+                results[feature] = {
+                    'p_value': p_value,
+                    'statistic': statistic,
+                    'significant': p_value < alpha,
+                    'effect_size': effect_size
+                }
+            except:
+                results[feature] = {'p_value': 1.0, 'statistic': 0, 'significant': False, 'effect_size': 0}
+    
+    # Select top features based on significance and p-value
+    feature_scores = [(feature, data['p_value'], data['significant']) 
+                     for feature, data in results.items()]
+    feature_scores.sort(key=lambda x: (not x[2], x[1]))  # Sort by significance first, then p-value
+    
+    selected_features = [feature for feature, _, _ in feature_scores[:top_k]]
+    
+    # Log results
+    significant_count = sum(1 for data in results.values() if data['significant'])
+    print(f"  Significant features found: {significant_count}/{len(results)}")
+    print(f"  Selected top {len(selected_features)} features")
+    
+    if len(selected_features) > 0:
+        print(f"  Top 3 features: {', '.join(selected_features[:3])}")
+    
+    return selected_features, results
+
 # Log configuration and load data
 data = log_configuration_info()
 if data is None:
@@ -162,6 +364,54 @@ if data is None:
 # Load and prepare data with logging
 columns_to_drop = ["id", "peptide_seq", "targetcol", "hydrophobic_cornette", "synthesis_flag"]
 X, y = log_preprocessing_info(data, columns_to_drop)
+
+# STATISTICAL FEATURE SELECTION
+print()
+print("STATISTICAL FEATURE SELECTION:")
+print("-" * 50)
+
+# Perform all statistical tests feature selection
+mann_whitney_features, mw_results = statistical_feature_selection(
+    X, y, method='mann_whitney', top_k=15, alpha=0.05
+)
+
+wilcoxon_features, w_results = statistical_feature_selection(
+    X, y, method='wilcoxon', top_k=15, alpha=0.05
+)
+
+kruskal_features, k_results = statistical_feature_selection(
+    X, y, method='kruskal', top_k=15, alpha=0.05
+)
+
+chi2_features, chi_results = statistical_feature_selection(
+    X, y, method='chi2', top_k=15, alpha=0.05
+)
+
+ks_features, ks_results = statistical_feature_selection(
+    X, y, method='ks_2samp', top_k=15, alpha=0.05
+)
+
+print(f"\nStatistical Feature Selection Results:")
+print(f"Mann-Whitney selected: {len(mann_whitney_features)} features")
+print(f"Wilcoxon selected: {len(wilcoxon_features)} features")
+print(f"Kruskal-Wallis selected: {len(kruskal_features)} features")
+print(f"Chi-square selected: {len(chi2_features)} features")
+print(f"Kolmogorov-Smirnov selected: {len(ks_features)} features")
+
+# Find common features between all statistical methods
+all_statistical_features = [mann_whitney_features, wilcoxon_features, kruskal_features, 
+                           chi2_features, ks_features]
+common_all_methods = set(mann_whitney_features)
+for features in all_statistical_features[1:]:
+    common_all_methods = common_all_methods.intersection(set(features))
+
+print(f"Common features across all statistical methods: {len(common_all_methods)}")
+if len(common_all_methods) > 0:
+    print(f"Common features: {list(common_all_methods)[:10]}")  # Show top 10
+
+# Find common features between traditional methods (Mann-Whitney + Wilcoxon)
+common_statistical_features = list(set(mann_whitney_features) & set(wilcoxon_features))
+print(f"Common features between Mann-Whitney and Wilcoxon: {len(common_statistical_features)}")
 
 # Define classifiers with integrated feature selection.
 # For SVM we integrate feature selection via SelectKBest inside the pipeline.
@@ -206,6 +456,230 @@ classifiers = {
             GaussianNB()
         ),
         'selector': SelectKBest(score_func=f_classif, k=5)
+    },
+    # Statistical feature selection classifiers
+    "Random Forest (Mann-Whitney)": {
+        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
+        'selector': None,  # Features pre-selected
+        'features': mann_whitney_features
+    },
+    "Random Forest (Wilcoxon)": {
+        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
+        'selector': None,  # Features pre-selected
+        'features': wilcoxon_features
+    },
+    "Random Forest (Kruskal)": {
+        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
+        'selector': None,  # Features pre-selected
+        'features': kruskal_features
+    },
+    "Random Forest (Chi-square)": {
+        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
+        'selector': None,  # Features pre-selected
+        'features': chi2_features
+    },
+    "Random Forest (Kolmogorov-Smirnov)": {
+        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
+        'selector': None,  # Features pre-selected
+        'features': ks_features
+    },
+    "Logistic Regression (Mann-Whitney)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            LogisticRegression(max_iter=5000, class_weight='balanced',
+                               solver='saga', penalty='l1', C=0.1,
+                               random_state=42, n_jobs=-1)
+        ),
+        'selector': None,  # Features pre-selected
+        'features': mann_whitney_features
+    },
+    "Logistic Regression (Wilcoxon)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            LogisticRegression(max_iter=5000, class_weight='balanced',
+                               solver='saga', penalty='l1', C=0.1,
+                               random_state=42, n_jobs=-1)
+        ),
+        'selector': None,  # Features pre-selected
+        'features': wilcoxon_features
+    },
+    "Logistic Regression (Kruskal)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            LogisticRegression(max_iter=5000, class_weight='balanced',
+                               solver='saga', penalty='l1', C=0.1,
+                               random_state=42, n_jobs=-1)
+        ),
+        'selector': None,  # Features pre-selected
+        'features': kruskal_features
+    },
+    "Logistic Regression (Chi-square)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            LogisticRegression(max_iter=5000, class_weight='balanced',
+                               solver='saga', penalty='l1', C=0.1,
+                               random_state=42, n_jobs=-1)
+        ),
+        'selector': None,  # Features pre-selected
+        'features': chi2_features
+    },
+    "Logistic Regression (Kolmogorov-Smirnov)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            LogisticRegression(max_iter=5000, class_weight='balanced',
+                               solver='saga', penalty='l1', C=0.1,
+                               random_state=42, n_jobs=-1)
+        ),
+        'selector': None,  # Features pre-selected
+        'features': ks_features
+    },
+    "SVM (Mann-Whitney)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': mann_whitney_features
+    },
+    "SVM (Wilcoxon)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': wilcoxon_features
+    },
+    "SVM (Kruskal)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': kruskal_features
+    },
+    "SVM (Chi-square)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': chi2_features
+    },
+    "SVM (Kolmogorov-Smirnov)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': ks_features
+    },
+    # K-Neighbors with statistical feature selection
+    "K-Neighbors (Mann-Whitney)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': mann_whitney_features
+    },
+    "K-Neighbors (Wilcoxon)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': wilcoxon_features
+    },
+    "K-Neighbors (Kruskal)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': kruskal_features
+    },
+    "K-Neighbors (Chi-square)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': chi2_features
+    },
+    "K-Neighbors (Kolmogorov-Smirnov)": {
+        'model': Pipeline([
+            ('scaler', StandardScaler()),
+            ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
+        ]),
+        'selector': None,  # Features pre-selected
+        'features': ks_features
+    },
+    # Decision Tree with statistical feature selection
+    "Decision Tree (Mann-Whitney)": {
+        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
+        'selector': None,  # Features pre-selected
+        'features': mann_whitney_features
+    },
+    "Decision Tree (Wilcoxon)": {
+        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
+        'selector': None,  # Features pre-selected
+        'features': wilcoxon_features
+    },
+    "Decision Tree (Kruskal)": {
+        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
+        'selector': None,  # Features pre-selected
+        'features': kruskal_features
+    },
+    "Decision Tree (Chi-square)": {
+        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
+        'selector': None,  # Features pre-selected
+        'features': chi2_features
+    },
+    "Decision Tree (Kolmogorov-Smirnov)": {
+        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
+        'selector': None,  # Features pre-selected
+        'features': ks_features
+    },
+    # Naive Bayes with statistical feature selection
+    "Naive Bayes (Mann-Whitney)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            GaussianNB()
+        ),
+        'selector': None,  # Features pre-selected
+        'features': mann_whitney_features
+    },
+    "Naive Bayes (Wilcoxon)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            GaussianNB()
+        ),
+        'selector': None,  # Features pre-selected
+        'features': wilcoxon_features
+    },
+    "Naive Bayes (Kruskal)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            GaussianNB()
+        ),
+        'selector': None,  # Features pre-selected
+        'features': kruskal_features
+    },
+    "Naive Bayes (Chi-square)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            GaussianNB()
+        ),
+        'selector': None,  # Features pre-selected
+        'features': chi2_features
+    },
+    "Naive Bayes (Kolmogorov-Smirnov)": {
+        'model': make_pipeline(
+            StandardScaler(),
+            GaussianNB()
+        ),
+        'selector': None,  # Features pre-selected
+        'features': ks_features
     }
 }
 
@@ -225,7 +699,37 @@ feature_importance_dict = {
     "SVM": pd.Series(0.0, index=X.columns),
     "K-Neighbors": pd.Series(0.0, index=X.columns),
     "Decision Tree": pd.Series(0.0, index=X.columns),
-    "Naive Bayes": pd.Series(0.0, index=X.columns)
+    "Naive Bayes": pd.Series(0.0, index=X.columns),
+    "Random Forest (Mann-Whitney)": pd.Series(0.0, index=X.columns),
+    "Random Forest (Wilcoxon)": pd.Series(0.0, index=X.columns),
+    "Random Forest (Kruskal)": pd.Series(0.0, index=X.columns),
+    "Random Forest (Chi-square)": pd.Series(0.0, index=X.columns),
+    "Random Forest (Kolmogorov-Smirnov)": pd.Series(0.0, index=X.columns),
+    "Logistic Regression (Mann-Whitney)": pd.Series(0.0, index=X.columns),
+    "Logistic Regression (Wilcoxon)": pd.Series(0.0, index=X.columns),
+    "Logistic Regression (Kruskal)": pd.Series(0.0, index=X.columns),
+    "Logistic Regression (Chi-square)": pd.Series(0.0, index=X.columns),
+    "Logistic Regression (Kolmogorov-Smirnov)": pd.Series(0.0, index=X.columns),
+    "SVM (Mann-Whitney)": pd.Series(0.0, index=X.columns),
+    "SVM (Wilcoxon)": pd.Series(0.0, index=X.columns),
+    "SVM (Kruskal)": pd.Series(0.0, index=X.columns),
+    "SVM (Chi-square)": pd.Series(0.0, index=X.columns),
+    "SVM (Kolmogorov-Smirnov)": pd.Series(0.0, index=X.columns),
+    "K-Neighbors (Mann-Whitney)": pd.Series(0.0, index=X.columns),
+    "K-Neighbors (Wilcoxon)": pd.Series(0.0, index=X.columns),
+    "K-Neighbors (Kruskal)": pd.Series(0.0, index=X.columns),
+    "K-Neighbors (Chi-square)": pd.Series(0.0, index=X.columns),
+    "K-Neighbors (Kolmogorov-Smirnov)": pd.Series(0.0, index=X.columns),
+    "Decision Tree (Mann-Whitney)": pd.Series(0.0, index=X.columns),
+    "Decision Tree (Wilcoxon)": pd.Series(0.0, index=X.columns),
+    "Decision Tree (Kruskal)": pd.Series(0.0, index=X.columns),
+    "Decision Tree (Chi-square)": pd.Series(0.0, index=X.columns),
+    "Decision Tree (Kolmogorov-Smirnov)": pd.Series(0.0, index=X.columns),
+    "Naive Bayes (Mann-Whitney)": pd.Series(0.0, index=X.columns),
+    "Naive Bayes (Wilcoxon)": pd.Series(0.0, index=X.columns),
+    "Naive Bayes (Kruskal)": pd.Series(0.0, index=X.columns),
+    "Naive Bayes (Chi-square)": pd.Series(0.0, index=X.columns),
+    "Naive Bayes (Kolmogorov-Smirnov)": pd.Series(0.0, index=X.columns)
 }
 
 # Initialize results dictionary to store all classifier performance
@@ -243,7 +747,52 @@ for clf_name, clf_info in classifiers.items():
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
         y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
         
-        if clf_info['selector'] is not None:
+        # Check if features are pre-selected (statistical methods)
+        if 'features' in clf_info:
+            # Use pre-selected features from statistical tests
+            selected_features = clf_info['features']
+            X_train_selected = X_train[selected_features]
+            X_test_selected = X_test[selected_features]
+            
+            # Train model with pre-selected features
+            model = clf_info['model'].fit(X_train_selected, y_train)
+            
+            # For feature importance, use model-based importance if available
+            if hasattr(model, 'feature_importances_'):
+                importances = pd.Series(model.feature_importances_, index=selected_features)
+            elif hasattr(model, 'coef_') and hasattr(model.coef_, 'shape'):
+                if len(model.coef_.shape) > 1:
+                    importances = pd.Series(np.abs(model.coef_[0]), index=selected_features)
+                else:
+                    importances = pd.Series(np.abs(model.coef_), index=selected_features)
+            elif hasattr(model.named_steps, 'logisticregression'):
+                # For pipeline with logistic regression
+                coefs = model.named_steps['logisticregression'].coef_[0]
+                importances = pd.Series(np.abs(coefs), index=selected_features)
+            else:
+                # Use statistical test p-values as importance (inverse)
+                if clf_name.endswith("(Mann-Whitney)"):
+                    stat_results = mw_results
+                elif clf_name.endswith("(Wilcoxon)"):
+                    stat_results = w_results
+                elif clf_name.endswith("(Kruskal)"):
+                    stat_results = k_results
+                elif clf_name.endswith("(Chi-square)"):
+                    stat_results = chi_results
+                elif clf_name.endswith("(Kolmogorov-Smirnov)"):
+                    stat_results = ks_results
+                else:
+                    stat_results = {}
+                
+                importances = pd.Series([1.0 / (stat_results.get(feat, {'p_value': 1.0})['p_value'] + 1e-10) 
+                                       for feat in selected_features], index=selected_features)
+            
+            # Update global feature importance
+            full_importances = pd.Series(0.0, index=X.columns)
+            full_importances[selected_features] = importances.values
+            model_feature_importance += full_importances
+            
+        elif clf_info['selector'] is not None:
             # Use external selector branch.
             # For ReliefF (used with K-Neighbors), work with numpy arrays.
             if isinstance(clf_info['selector'], ReliefF):
@@ -373,13 +922,13 @@ for model_name, imp_series in feature_importance_dict.items():
 
 # Save comprehensive results with timestamp
 timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-results_filename = f"feature_selection_results_{timestamp}.txt"
+results_filename = f"feature_selection_results_{dataset_file}_{timestamp}.txt"
 
 with open(results_filename, 'w') as f:
     f.write("PEPTIDE SYNTHESIS PREDICTION - FEATURE SELECTION RESULTS\n")
     f.write("=" * 80 + "\n\n")
     f.write(f"Experiment Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    f.write(f"Dataset: peptide_baza_balanced.csv\n")
+    f.write(f"Dataset: {dataset_file}\n")
     f.write(f"Total samples: {len(y)}\n")
     f.write(f"Total features: {X.shape[1]}\n")
     f.write(f"Cross-validation: {kf.cvargs['n_splits']}-fold, {kf.n_repeats} repeats\n")
