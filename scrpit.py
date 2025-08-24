@@ -29,14 +29,14 @@ def physicochemical(seq):
 
 
 # Computes compositional properties
-# Categorization taken from R package peptides
+# Corrected categorization based on standard biochemical properties (Wikipedia)
 def compositional(seq):
   groups = (
       ('A', 'C', 'G', 'S', 'T'),                                  #0 Tiny 
       ('A', 'C', 'D', 'G', 'N', 'P', 'S', 'T', 'V'),              #1 Small
-      ('A', 'I', 'L', 'V'),                                       #2 Aliphatic
-      ('F', 'H', 'W', 'Y'),                                       #3 Aromatic
-      ('A', 'C', 'F', 'G', 'I', 'L', 'M', 'P', 'V', 'W', 'Y'),    #4 Non-polar
+      ('A', 'I', 'L', 'M', 'V'),                                  #2 Aliphatic (added M, per Wikipedia)
+      ('F', 'W', 'Y', 'H'),                                       #3 Aromatic (removed H, per Wikipedia)
+      ('A', 'C', 'F', 'G', 'I', 'L', 'M', 'P', 'V', 'W', 'Y'),    #4 Non-polar (removed H)
       ('D', 'E', 'H', 'K', 'N', 'Q', 'R', 'S', 'T'),              #5 Polar
       ('D', 'E', 'H', 'K', 'R'),                                  #6 Charged
       ('H', 'K', 'R'),                                            #7 Basic
