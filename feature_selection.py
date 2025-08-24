@@ -13,12 +13,14 @@ from sklearn.metrics import (
     precision_score, recall_score, matthews_corrcoef,
     confusion_matrix
 )
+from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.feature_selection import SelectFromModel, SelectKBest, f_classif, RFECV
 from skrebate import ReliefF
 from scipy.stats import wilcoxon, mannwhitneyu, kruskal, chi2_contingency, ks_2samp, friedmanchisquare, norm, rankdata
 import itertools
+import re
 import warnings
 import datetime
 import os
@@ -1120,6 +1122,8 @@ for clf_name, clf_info in classifiers.items():
     print(f"\n{'='*40}\nEvaluating {clf_name}\n{'='*40}")
     
     metrics_history = {metric: [] for metric in ['Accuracy', 'F1', 'AUC-ROC', 'Precision', 'Recall', 'MCC']}
+    # OOF vektor za ovaj model (jedna vrijednost po uzorku, puni se kroz foldove)
+    y_oof = np.full(len(y), np.nan, dtype=float)
     # Accumulate per-fold feature importance for this classifier.
     model_feature_importance = pd.Series(0.0, index=X.columns)
     confusion_matrices = []
@@ -1142,6 +1146,9 @@ for clf_name, clf_info in classifiers.items():
                 y_proba = model_fitted.decision_function(X_test)
             else:
                 y_proba = (y_pred == 1).astype(float)
+
+            # Spremi out-of-fold predikcije za trenutni test indeks
+            y_oof[test_idx] = y_proba
 
             # Extract importances from pipeline
             importances_series = extract_feature_importance_from_pipeline(model_fitted, X.columns)
@@ -1188,6 +1195,9 @@ for clf_name, clf_info in classifiers.items():
                 y_proba = model_fitted.decision_function(X_test_selected)
             else:
                 y_proba = (y_pred == 1).astype(float)
+
+            # Spremi out-of-fold predikcije za trenutni test indeks
+            y_oof[test_idx] = y_proba
 
             # For feature importance, use model-based importance if available
             if hasattr(model_fitted, 'feature_importances_'):
@@ -1264,6 +1274,14 @@ for clf_name, clf_info in classifiers.items():
 
     fold_metrics_copy = {m: list(vals) for m, vals in metrics_history.items()}
 
+    # OOF ROC i AUC za ovaj model
+    mask = ~np.isnan(y_oof)
+    if mask.sum() > 0 and np.unique(y.values[mask]).size == 2:
+        fpr, tpr, thresholds = roc_curve(y.values[mask], y_oof[mask])
+        roc_auc_val = auc(fpr, tpr)
+    else:
+        fpr, tpr, roc_auc_val = np.array([0.0, 1.0]), np.array([0.0, 1.0]), float('nan')
+
     all_classifier_results[clf_name] = {
         'avg_metrics': avg_metrics,
         'std_metrics': std_metrics,
@@ -1271,7 +1289,12 @@ for clf_name, clf_info in classifiers.items():
         'confusion_matrix': np.sum(confusion_matrices, axis=0),
         'total_cv_folds': len(metrics_history['Accuracy']),
         'selected_features_count': selected_features_count,
-        'fold_metrics': fold_metrics_copy
+        'fold_metrics': fold_metrics_copy,
+        'roc_curve': {
+            'fpr': fpr.tolist(),
+            'tpr': tpr.tolist(),
+            'auc': float(roc_auc_val)
+        }
     }
     
     print("\nAverage Performance Metrics:")
@@ -1314,6 +1337,68 @@ for model_name, imp_series in feature_importance_dict.items():
     print(f"\n{model_name} - Top 5 Features:")
     for feat, imp in imp_series.nlargest(5).items():
         print(f"  {feat}: {imp:.4f}")
+
+# --- OOF ROC plotting ---
+def slugify(s):
+    return re.sub(r'[^A-Za-z0-9]+', '_', s).strip('_')[:60]
+
+ts_plot = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+# Combined ROC for all models
+try:
+    import importlib
+    plt = importlib.import_module('matplotlib.pyplot')
+    plt.figure(figsize=(7, 6))
+    for name, res in all_classifier_results.items():
+        roc_info = res.get('roc_curve')
+        if not roc_info:
+            continue
+        fpr = np.array(roc_info['fpr'], dtype=float)
+        tpr = np.array(roc_info['tpr'], dtype=float)
+        auc_val = float(roc_info['auc']) if 'auc' in roc_info else float('nan')
+        if fpr.size > 1 and tpr.size > 1 and np.all(np.isfinite(fpr)) and np.all(np.isfinite(tpr)):
+            label = f"{name} (AUC={auc_val:.3f})" if np.isfinite(auc_val) else f"{name} (AUC=NaN)"
+            plt.plot(fpr, tpr, lw=1.5, label=label)
+
+    plt.plot([0, 1], [0, 1], 'k--', lw=1)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC curves (OOF predictions)')
+    plt.legend(loc='lower right', fontsize=7)
+    plt.tight_layout()
+    plt.savefig(f"roc_curves_all_models_{ts_plot}.png", dpi=200)
+    plt.close()
+    print(f"Saved: roc_curves_all_models_{ts_plot}.png")
+
+    # Optional: per-model ROC plots
+    for name, res in all_classifier_results.items():
+        roc_info = res.get('roc_curve')
+        if not roc_info:
+            continue
+        fpr = np.array(roc_info['fpr'], dtype=float)
+        tpr = np.array(roc_info['tpr'], dtype=float)
+        auc_val = float(roc_info['auc']) if 'auc' in roc_info else float('nan')
+        if fpr.size <= 1 or tpr.size <= 1 or not np.all(np.isfinite(fpr)) or not np.all(np.isfinite(tpr)):
+            continue
+        plt.figure(figsize=(6, 5))
+        label = f"AUC={auc_val:.3f}" if np.isfinite(auc_val) else "AUC=NaN"
+        plt.plot(fpr, tpr, lw=1.8, label=label)
+        plt.plot([0, 1], [0, 1], 'k--', lw=1)
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.0])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title(f'ROC: {name}')
+        plt.legend(loc='lower right')
+        plt.tight_layout()
+        fname = f"roc_{slugify(name)}_{ts_plot}.png"
+        plt.savefig(fname, dpi=200)
+        plt.close()
+        print(f"Saved: {fname}")
+except Exception as e:
+    print(f"[WARN] Skipping ROC plotting due to: {e}")
 
 # Save comprehensive results with timestamp
 timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
