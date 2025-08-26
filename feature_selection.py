@@ -21,7 +21,9 @@ from skrebate import ReliefF
 from scipy.stats import wilcoxon, mannwhitneyu, kruskal, chi2_contingency, ks_2samp, friedmanchisquare, norm, rankdata
 import itertools
 import re
+from sklearn.base import BaseEstimator, TransformerMixin
 import warnings
+from contextlib import contextmanager
 import datetime
 import os
 
@@ -29,8 +31,62 @@ import os
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-# dataset_file = 'peptide_baza_balanced.csv'
-dataset_file = 'peptide_baza_formatted.csv'
+dataset_file = 'peptide_baza_balanced.csv'
+# dataset_file = 'peptide_baza_formatted.csv'
+
+# --- Caching imports and configuration ---
+import os, json, pickle, hashlib, time, sys, platform
+from joblib import Memory
+
+CACHE_DIR = "cache"
+JOBLIB_DIR = os.path.join(CACHE_DIR, "joblib")
+os.makedirs(CACHE_DIR, exist_ok=True)
+os.makedirs(JOBLIB_DIR, exist_ok=True)
+
+PARQUET_PATH = dataset_file.replace(".csv", ".parquet")
+FINGERPRINT_JSON = os.path.join(CACHE_DIR, "dataset_fingerprint.json")
+
+memory = Memory(location=JOBLIB_DIR, verbose=0)
+
+def dataset_fingerprint(path):
+    try:
+        st = os.stat(path)
+        return {"path": os.path.abspath(path), "size": st.st_size, "mtime": st.st_mtime}
+    except FileNotFoundError:
+        return {"path": os.path.abspath(path), "size": 0, "mtime": 0.0}
+
+def model_specs(classifiers):
+    specs = {}
+    for name, info in classifiers.items():
+        mdl = info["model"]
+        params = getattr(mdl, "get_params", lambda: {})()
+        specs[name] = str(sorted(params.items()))
+    return specs
+
+def make_run_id(dataset_file, classifiers, cv, extra=None):
+    import sklearn
+    payload = {
+        "dataset": dataset_fingerprint(dataset_file),
+        "classifiers": model_specs(classifiers),
+        "cv": {"splits": cv.cvargs["n_splits"], "repeats": getattr(cv, "n_repeats", 1), "seed": cv.random_state},
+        "extra": {
+            "python": sys.version,
+            "platform": platform.platform(),
+            "sklearn": getattr(sklearn, "__version__", "unknown"),
+            **(extra or {})
+        },
+    }
+    blob = json.dumps(payload, sort_keys=True).encode()
+    return hashlib.sha1(blob).hexdigest()
+
+def cache_paths(run_id):
+    return (os.path.join(CACHE_DIR, f"results_{run_id}.pkl"),
+            os.path.join(CACHE_DIR, f"featimp_{run_id}.pkl"),
+            os.path.join(CACHE_DIR, f"oof_{run_id}.npz"))
+
+@memory.cache
+def cached_stat_select(X_df, y_ser, method, top_k, alpha, adjust, es_min, corr_filter=False, corr_threshold=0.95):
+    return statistical_feature_selection(X_df, y_ser, method=method, top_k=top_k, alpha=alpha, adjust=adjust, es_min=es_min)
 
 # --- Integrated selector constructors ---
 def make_integrated_selector_logreg_l1(C=0.1, class_weight='balanced', random_state=42, max_iter=5000):
@@ -46,12 +102,79 @@ def make_integrated_selector_rf(n_estimators=300, max_depth=None, random_state=4
     )
     return SelectFromModel(estimator=rf, threshold=threshold)
 
-def make_rfecv_logreg_l1(C=0.1, class_weight='balanced', random_state=42, max_iter=5000, step=0.1, cv=5, n_jobs=-1):
-    est = LogisticRegression(
-        penalty='l1', solver='saga', C=C, class_weight=class_weight,
-        random_state=random_state, max_iter=max_iter, n_jobs=n_jobs
+@contextmanager
+def catch_convergence():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        yield w
+
+
+def make_rfecv_logreg_l1(
+    C=0.1,
+    class_weight='balanced',
+    random_state=42,
+    max_iter=50000,
+    tol=1e-3,
+    step=0.1,
+    cv=5,
+    n_jobs=-1,
+    solver='saga',
+    fallback_solver='liblinear'
+):
+    # Primary estimator
+    base_est = LogisticRegression(
+        penalty='l1',
+        solver=solver,
+        C=C,
+        class_weight=class_weight,
+        random_state=random_state,
+        max_iter=max_iter,
+        tol=tol,
+        n_jobs=(n_jobs if solver == 'liblinear' else None)
     )
-    return RFECV(estimator=est, step=step, cv=cv, scoring='f1', n_jobs=n_jobs)
+
+    class RFECVWithFallback(RFECV):
+        def fit(self, X, y):
+            # First attempt
+            with catch_convergence() as wlist:
+                result = super().fit(X, y)
+            conv = any(issubclass(w.category, ConvergenceWarning) for w in wlist)
+            if conv and fallback_solver and fallback_solver != solver:
+                print(f"[RFECV] ConvergenceWarning detected with solver='{solver}'. Retrying with fallback solver='{fallback_solver}'.")
+                fb_est = LogisticRegression(
+                    penalty='l1',
+                    solver=fallback_solver,
+                    C=C,
+                    class_weight=class_weight,
+                    random_state=random_state,
+                    max_iter=max_iter,
+                    tol=tol,
+                    n_jobs=(n_jobs if fallback_solver == 'liblinear' else None)
+                )
+                self.estimator = fb_est
+                # Clean attributes from previous fit if present
+                for attr in ['grid_scores_', 'cv_results_', 'ranking_', 'support_', 'n_features_']:
+                    if hasattr(self, attr):
+                        try:
+                            delattr(self, attr)
+                        except Exception:
+                            pass
+                # Second attempt with fallback
+                with catch_convergence() as _:
+                    result = super(RFECVWithFallback, self).fit(X, y)
+            # Final solver info
+            try:
+                est = getattr(self, 'estimator_', None) or self.estimator
+                print(f"[RFECV] Final solver used: {getattr(est, 'solver', 'unknown')}")
+            except Exception:
+                pass
+            return result
+
+    # Use n_jobs=1 to keep RFECV inner-CV fits in-process so ConvergenceWarning capture works reliably
+    rfecv_fb = RFECVWithFallback(
+        estimator=base_est, step=step, cv=cv, scoring='roc_auc', n_jobs=1, min_features_to_select=1
+    )
+    return rfecv_fb
 
 
 def extract_feature_importance_from_pipeline(model_fitted, X_columns):
@@ -96,6 +219,11 @@ def extract_feature_importance_from_pipeline(model_fitted, X_columns):
                 return pd.Series({c: v for c, v in zip(selected_cols, vals[:len(selected_cols)])})
             return pd.Series({c: 1.0 for c in selected_cols})
 
+        # Statistical selector (StatSelect) path: treat selected features with uniform weight
+        if 'stat' in steps and hasattr(steps['stat'], 'selected_') and steps['stat'].selected_:
+            sel = steps['stat'].selected_
+            return pd.Series({c: 1.0 for c in sel})
+
         # Direct classifier importances (if no selector step)
         if 'clf' in steps:
             clf = steps['clf']
@@ -106,6 +234,77 @@ def extract_feature_importance_from_pipeline(model_fitted, X_columns):
                 return pd.Series(np.abs(coefs), index=X_columns)
 
     return pd.Series(index=X_columns, data=0.0)
+
+
+# Formatting helper for p-values
+def fmt_p(p):
+    try:
+        p = float(p)
+        return f"{p:.3e}" if p < 1e-4 else f"{p:.4f}"
+    except Exception:
+        return str(p)
+
+
+class StatSelect(BaseEstimator, TransformerMixin):
+    def __init__(self, method='mann_whitney', top_k=15, alpha=0.05, adjust='bh',
+                 es_min=0.10, corr_filter=False, corr_threshold=0.95, random_state=42):
+        self.method = method
+        self.top_k = top_k
+        self.alpha = alpha
+        self.adjust = adjust
+        self.es_min = es_min
+        self.corr_filter = corr_filter
+        self.corr_threshold = corr_threshold
+        self.random_state = random_state
+        self.selected_ = []
+        self.columns_ = None
+
+    def _corr_prune(self, X: pd.DataFrame) -> pd.DataFrame:
+        if not self.corr_filter:
+            return X
+        corr = X.corr(method='spearman').abs()
+        upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
+        to_drop = [col for col in upper.columns if any(upper[col] > self.corr_threshold)]
+        return X.drop(columns=to_drop) if len(to_drop) else X
+
+    def fit(self, X, y):
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X)
+        self.columns_ = list(X.columns)
+        Xw = self._corr_prune(X)
+        # Align y index to X to avoid label-mismatch during .loc access in selection
+        y_series = pd.Series(y)
+        if len(y_series) == len(Xw):
+            try:
+                y_series.index = Xw.index
+            except Exception:
+                pass
+        feats, _ = statistical_feature_selection(
+            Xw, y_series, method=self.method, top_k=self.top_k,
+            alpha=self.alpha, adjust=self.adjust, es_min=self.es_min
+        )
+        self.selected_ = feats
+        print(f"[StatSelect] method={self.method}, adjust={self.adjust}, es_min={self.es_min:.2f}, selected={len(self.selected_)}")
+        return self
+
+    def transform(self, X):
+        if not self.selected_:
+            return X
+        if isinstance(X, pd.DataFrame):
+            cols = [c for c in self.selected_ if c in X.columns]
+            return X[cols] if cols else X
+        # numpy array fallback uses original column order
+        if self.columns_:
+            idx = [self.columns_.index(c) for c in self.selected_ if c in self.columns_]
+            return X[:, idx] if idx else X
+        return X
+
+    # Optional compatibility with get_support
+    def get_support(self, indices=False):
+        if self.columns_ is None:
+            return [] if indices else np.array([], dtype=bool)
+        mask = np.array([c in set(self.selected_) for c in self.columns_], dtype=bool)
+        return np.where(mask)[0] if indices else mask
 
 
 # --- Analysis helpers for logging and reporting ---
@@ -179,9 +378,43 @@ def log_configuration_info():
         print(f"Dataset file: {dataset_file}")
         print(f"File size: {file_size:.2f} MB")
         print(f"Last modified: {modification_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        
-        # Load and analyze dataset
-        data = pd.read_csv(dataset_file, sep=';', quotechar='"')
+
+        # Fast IO: prefer Parquet if fingerprint matches
+        fp_now = dataset_fingerprint(dataset_file)
+        fp_old = None
+        if os.path.exists(FINGERPRINT_JSON):
+            try:
+                with open(FINGERPRINT_JSON, 'r') as fpf:
+                    fp_db = json.load(fpf)
+                    fp_old = fp_db.get(os.path.abspath(dataset_file))
+            except Exception:
+                fp_old = None
+
+        use_parquet = os.path.exists(PARQUET_PATH) and (fp_old == fp_now)
+        if use_parquet:
+            try:
+                data = pd.read_parquet(PARQUET_PATH)
+                print(f"[CACHE] Loaded dataset from Parquet: {PARQUET_PATH}")
+            except Exception:
+                data = pd.read_csv(dataset_file, sep=';', quotechar='"')
+        else:
+            data = pd.read_csv(dataset_file, sep=';', quotechar='"')
+            try:
+                data.to_parquet(PARQUET_PATH, index=False)
+                # update fingerprint registry
+                fp_db = {}
+                if os.path.exists(FINGERPRINT_JSON):
+                    try:
+                        with open(FINGERPRINT_JSON, 'r') as fpf:
+                            fp_db = json.load(fpf)
+                    except Exception:
+                        fp_db = {}
+                fp_db[os.path.abspath(dataset_file)] = fp_now
+                with open(FINGERPRINT_JSON, 'w') as fpf:
+                    json.dump(fp_db, fpf, indent=2)
+                print(f"[CACHE] Wrote Parquet and updated fingerprint.")
+            except Exception as e:
+                print(f"[CACHE] Parquet write skipped: {e}")
         print(f"Dataset shape: {data.shape}")
         print(f"Target distribution:")
         target_counts = data['targetcol'].value_counts().sort_index()
@@ -429,7 +662,7 @@ def run_statistical_evaluation(all_results, metric_name='AUC-ROC', alpha=0.05, p
     for m, v in best_by_mean.items():
         print(f"  {m:40} {v:.4f}")
 
-def statistical_feature_selection(X, y, method='mann_whitney', top_k=10, alpha=0.05):
+def statistical_feature_selection(X, y, method='mann_whitney', top_k=10, alpha=0.05, adjust='bh', es_min=0.10):
     """
     Perform statistical feature selection using various statistical tests
     
@@ -628,18 +861,39 @@ def statistical_feature_selection(X, y, method='mann_whitney', top_k=10, alpha=0
             except:
                 results[feature] = {'p_value': 1.0, 'statistic': 0, 'significant': False, 'effect_size': 0}
     
-    # Select top features based on significance and p-value
-    feature_scores = [(feature, data['p_value'], data['significant']) 
-                     for feature, data in results.items()]
-    feature_scores.sort(key=lambda x: (not x[2], x[1]))  # Sort by significance first, then p-value
-    
-    selected_features = [feature for feature, _, _ in feature_scores[:top_k]]
-    
-    # Log results
-    significant_count = sum(1 for data in results.values() if data['significant'])
-    print(f"  Significant features found: {significant_count}/{len(results)}")
+    # Apply p-adjust and effect-size filtering
+    pvals = np.array([d.get('p_value', 1.0) for d in results.values()], dtype=float)
+    if pvals.size:
+        adj = p_adjust(pvals, method=adjust)
+        for (feat, d), p_adj in zip(results.items(), adj):
+            d['p_adj'] = float(p_adj)
+    else:
+        for d in results.values():
+            d['p_adj'] = 1.0
+
+    def _passes_effect(d, method_name):
+        es = abs(d.get('effect_size', 0.0))
+        if method_name in ('mann_whitney', 'wilcoxon', 'kruskal', 'ks_2samp'):
+            return es >= es_min
+        if method_name == 'chi2':
+            return es >= es_min
+        return True
+
+    filtered = [(f, d.get('p_adj', 1.0), d.get('effect_size', 0.0))
+                for f, d in results.items()
+                if d.get('p_adj', 1.0) < alpha and _passes_effect(d, method)]
+    filtered.sort(key=lambda x: (x[1], -abs(x[2])))
+    selected_features = [f for f, _, _ in filtered[:top_k]]
+
+    # Log results with p-adjust
+    all_p = np.array([v['p_value'] for v in results.values() if 'p_value' in v], dtype=float)
+    all_padj = np.array([v.get('p_adj', 1.0) for v in results.values()], dtype=float)
+    if all_p.size:
+        print(f"  Significant features found (raw): {(all_p < alpha).sum()}/{len(all_p)}")
+        print(f"  Significant features found (adj): {(all_padj < alpha).sum()}/{len(all_padj)}")
+        print(f"  Min raw p: {fmt_p(np.min(all_p))}, median p: {fmt_p(np.median(all_p))}")
+        print(f"  Min p_adj: {fmt_p(np.min(all_padj))}, median p_adj: {fmt_p(np.median(all_padj))}")
     print(f"  Selected top {len(selected_features)} features")
-    
     if len(selected_features) > 0:
         print(f"  Top 3 features: {', '.join(selected_features[:3])}")
     
@@ -660,25 +914,11 @@ print("STATISTICAL FEATURE SELECTION:")
 print("-" * 50)
 
 # Perform all statistical tests feature selection
-mann_whitney_features, mw_results = statistical_feature_selection(
-    X, y, method='mann_whitney', top_k=15, alpha=0.05
-)
-
-wilcoxon_features, w_results = statistical_feature_selection(
-    X, y, method='wilcoxon', top_k=15, alpha=0.05
-)
-
-kruskal_features, k_results = statistical_feature_selection(
-    X, y, method='kruskal', top_k=15, alpha=0.05
-)
-
-chi2_features, chi_results = statistical_feature_selection(
-    X, y, method='chi2', top_k=15, alpha=0.05
-)
-
-ks_features, ks_results = statistical_feature_selection(
-    X, y, method='ks_2samp', top_k=15, alpha=0.05
-)
+mann_whitney_features, mw_results = cached_stat_select(X, y, 'mann_whitney', 15, 0.05, 'bh', 0.10, False, 0.95)
+wilcoxon_features, w_results = cached_stat_select(X, y, 'wilcoxon', 15, 0.05, 'bh', 0.10, False, 0.95)
+kruskal_features,  k_results = cached_stat_select(X, y, 'kruskal', 15, 0.05, 'bh', 0.10, False, 0.95)
+chi2_features,     chi_results = cached_stat_select(X, y, 'chi2', 15, 0.05, 'bh', 0.10, False, 0.95)
+ks_features,       ks_results  = cached_stat_select(X, y, 'ks_2samp', 15, 0.05, 'bh', 0.10, False, 0.95)
 
 print(f"\nStatistical Feature Selection Results:")
 print(f"Mann-Whitney selected: {len(mann_whitney_features)} features")
@@ -690,28 +930,33 @@ print(f"Kolmogorov-Smirnov selected: {len(ks_features)} features")
 # Detailed lists of selected features for each statistical method
 print(f"\nMANN_WHITNEY SELECTED FEATURES ({len(mann_whitney_features)}):")
 for i, feature in enumerate(mann_whitney_features, 1):
-    p_val = mw_results[feature]['p_value']
-    print(f"  {i:2d}. {feature:30} (p={p_val:.4f})")
+    p_val = mw_results[feature].get('p_adj', mw_results[feature].get('p_value', 1.0))
+    es = mw_results[feature].get('effect_size', 0.0)
+    print(f"  {i:2d}. {feature:30} (p_adj={fmt_p(p_val)}, es={abs(es):.3f})")
 
 print(f"\nWILCOXON SELECTED FEATURES ({len(wilcoxon_features)}):")
 for i, feature in enumerate(wilcoxon_features, 1):
-    p_val = w_results[feature]['p_value']
-    print(f"  {i:2d}. {feature:30} (p={p_val:.4f})")
+    p_val = w_results[feature].get('p_adj', w_results[feature].get('p_value', 1.0))
+    es = w_results[feature].get('effect_size', 0.0)
+    print(f"  {i:2d}. {feature:30} (p_adj={fmt_p(p_val)}, es={abs(es):.3f})")
 
 print(f"\nKRUSKAL SELECTED FEATURES ({len(kruskal_features)}):")
 for i, feature in enumerate(kruskal_features, 1):
-    p_val = k_results[feature]['p_value']
-    print(f"  {i:2d}. {feature:30} (p={p_val:.4f})")
+    p_val = k_results[feature].get('p_adj', k_results[feature].get('p_value', 1.0))
+    es = k_results[feature].get('effect_size', 0.0)
+    print(f"  {i:2d}. {feature:30} (p_adj={fmt_p(p_val)}, es={abs(es):.3f})")
 
 print(f"\nCHI2 SELECTED FEATURES ({len(chi2_features)}):")
 for i, feature in enumerate(chi2_features, 1):
-    p_val = chi_results[feature]['p_value']
-    print(f"  {i:2d}. {feature:30} (p={p_val:.4f})")
+    p_val = chi_results[feature].get('p_adj', chi_results[feature].get('p_value', 1.0))
+    es = chi_results[feature].get('effect_size', 0.0)
+    print(f"  {i:2d}. {feature:30} (p_adj={fmt_p(p_val)}, es={abs(es):.3f})")
 
 print(f"\nKS SELECTED FEATURES ({len(ks_features)}):")
 for i, feature in enumerate(ks_features, 1):
-    p_val = ks_results[feature]['p_value']
-    print(f"  {i:2d}. {feature:30} (p={p_val:.4f})")
+    p_val = ks_results[feature].get('p_adj', ks_results[feature].get('p_value', 1.0))
+    es = ks_results[feature].get('effect_size', 0.0)
+    print(f"  {i:2d}. {feature:30} (p_adj={fmt_p(p_val)}, es={abs(es):.3f})")
 
 # Find common features between all statistical methods
 all_statistical_features = [mann_whitney_features, wilcoxon_features, kruskal_features, 
@@ -794,206 +1039,251 @@ classifiers = {
         'selector': None,
         'features': all_features
     },
-    # Random Forest statistical subsets
-    "Random Forest (Mann-Whitney)": {
-        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
-        'selector': None,
-        'features': mann_whitney_features
+    # Random Forest statistical subsets (in-CV selection to avoid leakage)
+    "Random Forest (MW - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='mann_whitney', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Random Forest (Wilcoxon)": {
-        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
-        'selector': None,
-        'features': wilcoxon_features
+    "Random Forest (Wilcoxon - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='wilcoxon', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Random Forest (Kruskal)": {
-        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
-        'selector': None,
-        'features': kruskal_features
+    "Random Forest (Kruskal - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='kruskal', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Random Forest (Chi-square)": {
-        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
-        'selector': None,
-        'features': chi2_features
+    "Random Forest (Chi-square - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='chi2', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Random Forest (Kolmogorov-Smirnov)": {
-        'model': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1),
-        'selector': None,
-        'features': ks_features
+    "Random Forest (KS - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='ks_2samp', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
     # Logistic Regression statistical subsets
-    "Logistic Regression (Mann-Whitney)": {
-        'model': make_pipeline(
-            StandardScaler(),
-            LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1)
-        ),
-        'selector': None,
-        'features': mann_whitney_features
+    "Logistic Regression (MW - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='mann_whitney', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('scaler', StandardScaler()),
+            ('clf', LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Logistic Regression (Wilcoxon)": {
-        'model': make_pipeline(
-            StandardScaler(),
-            LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1)
-        ),
-        'selector': None,
-        'features': wilcoxon_features
+    "Logistic Regression (Wilcoxon - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='wilcoxon', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('scaler', StandardScaler()),
+            ('clf', LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Logistic Regression (Kruskal)": {
-        'model': make_pipeline(
-            StandardScaler(),
-            LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1)
-        ),
-        'selector': None,
-        'features': kruskal_features
+    "Logistic Regression (Kruskal - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='kruskal', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('scaler', StandardScaler()),
+            ('clf', LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Logistic Regression (Chi-square)": {
-        'model': make_pipeline(
-            StandardScaler(),
-            LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1)
-        ),
-        'selector': None,
-        'features': chi2_features
+    "Logistic Regression (Chi-square - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='chi2', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('scaler', StandardScaler()),
+            ('clf', LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Logistic Regression (Kolmogorov-Smirnov)": {
-        'model': make_pipeline(
-            StandardScaler(),
-            LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1)
-        ),
-        'selector': None,
-        'features': ks_features
+    "Logistic Regression (KS - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='ks_2samp', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('scaler', StandardScaler()),
+            ('clf', LogisticRegression(max_iter=5000, class_weight='balanced', solver='saga', penalty='l1', C=0.1, random_state=42, n_jobs=-1))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
     # SVM statistical subsets
-    "SVM (Mann-Whitney)": {
+    "SVM (MW - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='mann_whitney', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
         ]),
-        'selector': None,
-        'features': mann_whitney_features
+        'selector': 'integrated',
+        'features': None
     },
-    "SVM (Wilcoxon)": {
+    "SVM (Wilcoxon - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='wilcoxon', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
         ]),
-        'selector': None,
-        'features': wilcoxon_features
+        'selector': 'integrated',
+        'features': None
     },
-    "SVM (Kruskal)": {
+    "SVM (Kruskal - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='kruskal', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
         ]),
-        'selector': None,
-        'features': kruskal_features
+        'selector': 'integrated',
+        'features': None
     },
-    "SVM (Chi-square)": {
+    "SVM (Chi-square - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='chi2', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
         ]),
-        'selector': None,
-        'features': chi2_features
+        'selector': 'integrated',
+        'features': None
     },
-    "SVM (Kolmogorov-Smirnov)": {
+    "SVM (KS - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='ks_2samp', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('svc', SVC(kernel='rbf', C=0.5, probability=True, random_state=42))
         ]),
-        'selector': None,
-        'features': ks_features
+        'selector': 'integrated',
+        'features': None
     },
     # K-Neighbors statistical subsets
-    "K-Neighbors (Mann-Whitney)": {
+    "K-Neighbors (MW - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='mann_whitney', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
         ]),
-        'selector': None,
-        'features': mann_whitney_features
+        'selector': 'integrated',
+        'features': None
     },
-    "K-Neighbors (Wilcoxon)": {
+    "K-Neighbors (Wilcoxon - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='wilcoxon', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
         ]),
-        'selector': None,
-        'features': wilcoxon_features
+        'selector': 'integrated',
+        'features': None
     },
-    "K-Neighbors (Kruskal)": {
+    "K-Neighbors (Kruskal - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='kruskal', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
         ]),
-        'selector': None,
-        'features': kruskal_features
+        'selector': 'integrated',
+        'features': None
     },
-    "K-Neighbors (Chi-square)": {
+    "K-Neighbors (Chi-square - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='chi2', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
         ]),
-        'selector': None,
-        'features': chi2_features
+        'selector': 'integrated',
+        'features': None
     },
-    "K-Neighbors (Kolmogorov-Smirnov)": {
+    "K-Neighbors (KS - inCV)": {
         'model': Pipeline([
+            ('stat', StatSelect(method='ks_2samp', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
             ('scaler', StandardScaler()),
             ('knn', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
         ]),
-        'selector': None,
-        'features': ks_features
+        'selector': 'integrated',
+        'features': None
     },
     # Decision Tree statistical subsets
-    "Decision Tree (Mann-Whitney)": {
-        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
-        'selector': None,
-        'features': mann_whitney_features
+    "Decision Tree (MW - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='mann_whitney', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Decision Tree (Wilcoxon)": {
-        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
-        'selector': None,
-        'features': wilcoxon_features
+    "Decision Tree (Wilcoxon - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='wilcoxon', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Decision Tree (Kruskal)": {
-        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
-        'selector': None,
-        'features': kruskal_features
+    "Decision Tree (Kruskal - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='kruskal', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Decision Tree (Chi-square)": {
-        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
-        'selector': None,
-        'features': chi2_features
+    "Decision Tree (Chi-square - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='chi2', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
-    "Decision Tree (Kolmogorov-Smirnov)": {
-        'model': DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42),
-        'selector': None,
-        'features': ks_features
+    "Decision Tree (KS - inCV)": {
+        'model': Pipeline([
+            ('stat', StatSelect(method='ks_2samp', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False)),
+            ('clf', DecisionTreeClassifier(max_depth=5, min_samples_split=10, random_state=42))
+        ]),
+        'selector': 'integrated',
+        'features': None
     },
     # Naive Bayes statistical subsets
-    "Naive Bayes (Mann-Whitney)": {
-        'model': make_pipeline(StandardScaler(), GaussianNB()),
-        'selector': None,
-        'features': mann_whitney_features
+    "Naive Bayes (MW - inCV)": {
+        'model': make_pipeline(StatSelect(method='mann_whitney', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False), StandardScaler(), GaussianNB()),
+        'selector': 'integrated',
+        'features': None
     },
-    "Naive Bayes (Wilcoxon)": {
-        'model': make_pipeline(StandardScaler(), GaussianNB()),
-        'selector': None,
-        'features': wilcoxon_features
+    "Naive Bayes (Wilcoxon - inCV)": {
+        'model': make_pipeline(StatSelect(method='wilcoxon', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False), StandardScaler(), GaussianNB()),
+        'selector': 'integrated',
+        'features': None
     },
-    "Naive Bayes (Kruskal)": {
-        'model': make_pipeline(StandardScaler(), GaussianNB()),
-        'selector': None,
-        'features': kruskal_features
+    "Naive Bayes (Kruskal - inCV)": {
+        'model': make_pipeline(StatSelect(method='kruskal', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False), StandardScaler(), GaussianNB()),
+        'selector': 'integrated',
+        'features': None
     },
-    "Naive Bayes (Chi-square)": {
-        'model': make_pipeline(StandardScaler(), GaussianNB()),
-        'selector': None,
-        'features': chi2_features
+    "Naive Bayes (Chi-square - inCV)": {
+        'model': make_pipeline(StatSelect(method='chi2', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False), StandardScaler(), GaussianNB()),
+        'selector': 'integrated',
+        'features': None
     },
-    "Naive Bayes (Kolmogorov-Smirnov)": {
-        'model': make_pipeline(StandardScaler(), GaussianNB()),
-        'selector': None,
-        'features': ks_features
+    "Naive Bayes (KS - inCV)": {
+        'model': make_pipeline(StatSelect(method='ks_2samp', top_k=15, alpha=0.05, adjust='bh', es_min=0.10, corr_filter=False), StandardScaler(), GaussianNB()),
+        'selector': 'integrated',
+        'features': None
     },
     # --- Integrated selectors inside pipelines ---
     # L1-LR selector -> LR
@@ -1073,7 +1363,9 @@ classifiers = {
     "Integrated-RFECV (L1-LR) + LR": {
         'model': Pipeline([
             ('scaler', StandardScaler()),
-            ('rfecv', make_rfecv_logreg_l1(C=0.1, cv=5)),
+            ('rfecv', make_rfecv_logreg_l1(
+                C=0.1, cv=5, max_iter=50000, tol=1e-3, solver='saga', fallback_solver='liblinear', n_jobs=-1
+            )),
             ('clf', LogisticRegression(
                 penalty='l2', solver='lbfgs', max_iter=5000, class_weight='balanced', n_jobs=-1, random_state=42
             ))
@@ -1085,7 +1377,9 @@ classifiers = {
     "Integrated-RFECV (L1-LR) + KNN": {
         'model': Pipeline([
             ('scaler', StandardScaler()),
-            ('rfecv', make_rfecv_logreg_l1(C=0.1, cv=5)),
+            ('rfecv', make_rfecv_logreg_l1(
+                C=0.1, cv=5, max_iter=50000, tol=1e-3, solver='saga', fallback_solver='liblinear', n_jobs=-1
+            )),
             ('clf', KNeighborsClassifier(n_neighbors=15, algorithm='kd_tree'))
         ]),
         'selector': 'integrated',
@@ -1095,7 +1389,9 @@ classifiers = {
     "Integrated-RFECV (L1-LR) + Naive Bayes": {
         'model': Pipeline([
             ('scaler', StandardScaler()),
-            ('rfecv', make_rfecv_logreg_l1(C=0.1, cv=5)),
+            ('rfecv', make_rfecv_logreg_l1(
+                C=0.1, cv=5, max_iter=50000, tol=1e-3, solver='saga', fallback_solver='liblinear', n_jobs=-1
+            )),
             ('clf', GaussianNB())
         ]),
         'selector': 'integrated',
@@ -1105,6 +1401,46 @@ classifiers = {
 
 # Configure cross-validation
 kf = RepeatedStratifiedKFold(n_splits=10, n_repeats=10, random_state=42)
+
+# Optional deterministic splits cache
+splits_file = os.path.join(CACHE_DIR, f"splits_{kf.cvargs['n_splits']}x{kf.n_repeats}_seed{kf.random_state}.npz")
+
+def _splits_valid(splits_list, n_samples):
+    try:
+        for tr, te in splits_list:
+            if len(tr) == 0 or len(te) == 0:
+                return False
+            if int(np.max(tr)) >= n_samples or int(np.max(te)) >= n_samples:
+                return False
+            if int(np.min(tr)) < 0 or int(np.min(te)) < 0:
+                return False
+        return True
+    except Exception:
+        return False
+
+if os.path.exists(splits_file):
+    try:
+        data_splits = np.load(splits_file, allow_pickle=True)
+        splits = list(data_splits["splits"])  # list of (train_idx, test_idx)
+        if not _splits_valid(splits, len(X)):
+            print(f"[CACHE] Cached splits invalid for current dataset (size changed). Regenerating.")
+            splits = list(kf.split(X, y))
+            np.savez_compressed(splits_file, splits=np.array(splits, dtype=object))
+        else:
+            print(f"[CACHE] Loaded CV splits from {splits_file}")
+    except Exception:
+        splits = list(kf.split(X, y))
+        try:
+            np.savez_compressed(splits_file, splits=np.array(splits, dtype=object))
+        except Exception:
+            pass
+else:
+    splits = list(kf.split(X, y))
+    try:
+        np.savez_compressed(splits_file, splits=np.array(splits, dtype=object))
+        print(f"[CACHE] Saved CV splits to {splits_file}")
+    except Exception as e:
+        print(f"[CACHE] Could not save splits: {e}")
 
 # Log cross-validation configuration
 log_cv_configuration(kf)
@@ -1118,202 +1454,233 @@ feature_importance_dict = {name: pd.Series(0.0, index=X.columns) for name in cla
 # Initialize results dictionary to store all classifier performance
 all_classifier_results = {}
 
-for clf_name, clf_info in classifiers.items():
-    print(f"\n{'='*40}\nEvaluating {clf_name}\n{'='*40}")
-    
-    metrics_history = {metric: [] for metric in ['Accuracy', 'F1', 'AUC-ROC', 'Precision', 'Recall', 'MCC']}
-    # OOF vektor za ovaj model (jedna vrijednost po uzorku, puni se kroz foldove)
-    y_oof = np.full(len(y), np.nan, dtype=float)
-    # Accumulate per-fold feature importance for this classifier.
-    model_feature_importance = pd.Series(0.0, index=X.columns)
-    confusion_matrices = []
-    # Track selected features per fold for integrated selectors
-    selected_features_per_fold = [] if clf_info.get('selector', None) == 'integrated' else None
-    
-    for fold, (train_idx, test_idx) in enumerate(kf.split(X, y), 1):
-        X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-        y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-        
-        model = clf_info['model']
+# Run-level cache gate
+no_cache = os.environ.get("NO_CACHE", "0") == "1" or "--no-cache" in sys.argv
+run_id = make_run_id(dataset_file, classifiers, kf, extra={"stat_select": {"top_k": 15, "alpha": 0.05, "adjust": "bh", "es_min": 0.10}})
+res_pkl, feat_pkl, oof_npz = cache_paths(run_id)
 
-        if clf_info.get('selector', None) == 'integrated':
-            # Fit entire pipeline on train and predict on test
-            model_fitted = model.fit(X_train, y_train)
-            y_pred = model_fitted.predict(X_test)
-            if hasattr(model_fitted, 'predict_proba'):
-                y_proba = model_fitted.predict_proba(X_test)[:, 1]
-            elif hasattr(model_fitted, 'decision_function'):
-                y_proba = model_fitted.decision_function(X_test)
-            else:
-                y_proba = (y_pred == 1).astype(float)
+feature_summary_pkl = os.path.join(CACHE_DIR, f"features_summary_{run_id}.pkl")
 
-            # Spremi out-of-fold predikcije za trenutni test indeks
-            y_oof[test_idx] = y_proba
+if (not no_cache) and os.path.exists(res_pkl) and os.path.exists(feat_pkl):
+    with open(res_pkl, "rb") as f:
+        all_classifier_results = pickle.load(f)
+    with open(feat_pkl, "rb") as f:
+        feature_importance_dict = pickle.load(f)
+    try:
+        with open(feature_summary_pkl, "rb") as f:
+            features_summary_data = pickle.load(f)
+    except Exception:
+        pass
+    print(f"[CACHE] Učitao rezultate iz cachea, preskačem treniranje. run_id={run_id}")
+else:
+    for clf_name, clf_info in classifiers.items():
+        print(f"\n{'='*40}\nEvaluating {clf_name}\n{'='*40}")
 
-            # Extract importances from pipeline
-            importances_series = extract_feature_importance_from_pipeline(model_fitted, X.columns)
-            full_importances = pd.Series(0.0, index=X.columns)
-            if len(importances_series) > 0:
-                full_importances.loc[importances_series.index] = importances_series.values
-            model_feature_importance += full_importances
+        metrics_history = {metric: [] for metric in ['Accuracy', 'F1', 'AUC-ROC', 'Precision', 'Recall', 'MCC']}
+        # OOF predictions vector for this model
+        y_oof = np.full(len(y), np.nan, dtype=float)
+        # Accumulate per-fold feature importance for this classifier.
+        model_feature_importance = pd.Series(0.0, index=X.columns)
+        confusion_matrices = []
+        # Track selected features per fold for integrated selectors
+        selected_features_per_fold = [] if clf_info.get('selector', None) == 'integrated' else None
 
-            # Log selected feature count (if available)
-            n_selected = None
-            if hasattr(model_fitted, 'named_steps'):
-                steps = model_fitted.named_steps
-                if 'selector' in steps and hasattr(steps['selector'], 'get_support'):
-                    n_selected = int(steps['selector'].get_support(indices=False).sum())
-                elif 'rfecv' in steps and hasattr(steps['rfecv'], 'support_'):
-                    n_selected = int(steps['rfecv'].support_.sum())
-            if n_selected is not None:
-                print(f"[Fold {fold}] Integrated selector kept {n_selected} features")
-                # Capture selected feature names
-                if 'selector' in steps and hasattr(steps['selector'], 'get_support'):
-                    mask = steps['selector'].get_support(indices=False)
-                    selected_fold_features = list(np.array(X.columns)[mask])
-                elif 'rfecv' in steps and hasattr(steps['rfecv'], 'support_'):
-                    mask = steps['rfecv'].support_
-                    selected_fold_features = list(np.array(X.columns)[mask])
+        for fold, (train_idx, test_idx) in enumerate(splits, 1):
+            X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+            y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+
+            model = clf_info['model']
+
+            if clf_info.get('selector', None) == 'integrated':
+                # Fit entire pipeline on train and predict on test
+                model_fitted = model.fit(X_train, y_train)
+                y_pred = model_fitted.predict(X_test)
+                if hasattr(model_fitted, 'predict_proba'):
+                    y_proba = model_fitted.predict_proba(X_test)[:, 1]
+                elif hasattr(model_fitted, 'decision_function'):
+                    y_proba = model_fitted.decision_function(X_test)
                 else:
-                    selected_fold_features = []
-                selected_features_per_fold.append(selected_fold_features)
-                preview = ', '.join(selected_fold_features[:5])
-                suffix = '...' if len(selected_fold_features) > 5 else ''
-                print(f"[Fold {fold}] Selected features: {preview}{suffix}")
-        else:
-            # Pre-selected features path (All or Statistical)
-            selected_features = clf_info['features']
-            X_train_selected = X_train[selected_features]
-            X_test_selected = X_test[selected_features]
+                    y_proba = (y_pred == 1).astype(float)
 
-            # Train and predict
-            model_fitted = model.fit(X_train_selected, y_train)
-            y_pred = model_fitted.predict(X_test_selected)
-            if hasattr(model_fitted, 'predict_proba'):
-                y_proba = model_fitted.predict_proba(X_test_selected)[:, 1]
-            elif hasattr(model_fitted, 'decision_function'):
-                y_proba = model_fitted.decision_function(X_test_selected)
+                # Save out-of-fold predictions for current test index
+                y_oof[test_idx] = y_proba
+
+                # Extract importances from pipeline
+                importances_series = extract_feature_importance_from_pipeline(model_fitted, X.columns)
+                full_importances = pd.Series(0.0, index=X.columns)
+                if len(importances_series) > 0:
+                    full_importances.loc[importances_series.index] = importances_series.values
+                model_feature_importance += full_importances
+
+                # Log selected feature count (if available)
+                n_selected = None
+                if hasattr(model_fitted, 'named_steps'):
+                    steps = model_fitted.named_steps
+                    if 'selector' in steps and hasattr(steps['selector'], 'get_support'):
+                        n_selected = int(steps['selector'].get_support(indices=False).sum())
+                    elif 'rfecv' in steps and hasattr(steps['rfecv'], 'support_'):
+                        n_selected = int(steps['rfecv'].support_.sum())
+                if n_selected is not None:
+                    print(f"[Fold {fold}] Integrated selector kept {n_selected} features")
+                    # Capture selected feature names
+                    if 'selector' in steps and hasattr(steps['selector'], 'get_support'):
+                        mask = steps['selector'].get_support(indices=False)
+                        selected_fold_features = list(np.array(X.columns)[mask])
+                    elif 'rfecv' in steps and hasattr(steps['rfecv'], 'support_'):
+                        mask = steps['rfecv'].support_
+                        selected_fold_features = list(np.array(X.columns)[mask])
+                    else:
+                        selected_fold_features = []
+                    selected_features_per_fold.append(selected_fold_features)
+                    preview = ', '.join(selected_fold_features[:5])
+                    suffix = '...' if len(selected_fold_features) > 5 else ''
+                    print(f"[Fold {fold}] Selected features: {preview}{suffix}")
             else:
-                y_proba = (y_pred == 1).astype(float)
+                # Pre-selected features path (All or Statistical)
+                selected_features = clf_info['features']
+                X_train_selected = X_train[selected_features]
+                X_test_selected = X_test[selected_features]
 
-            # Spremi out-of-fold predikcije za trenutni test indeks
-            y_oof[test_idx] = y_proba
-
-            # For feature importance, use model-based importance if available
-            if hasattr(model_fitted, 'feature_importances_'):
-                importances = pd.Series(model_fitted.feature_importances_, index=selected_features)
-            elif hasattr(model_fitted, 'coef_') and hasattr(model_fitted.coef_, 'shape'):
-                if len(model_fitted.coef_.shape) > 1:
-                    importances = pd.Series(np.abs(model_fitted.coef_[0]), index=selected_features)
+                # Train and predict
+                model_fitted = model.fit(X_train_selected, y_train)
+                y_pred = model_fitted.predict(X_test_selected)
+                if hasattr(model_fitted, 'predict_proba'):
+                    y_proba = model_fitted.predict_proba(X_test_selected)[:, 1]
+                elif hasattr(model_fitted, 'decision_function'):
+                    y_proba = model_fitted.decision_function(X_test_selected)
                 else:
-                    importances = pd.Series(np.abs(model_fitted.coef_), index=selected_features)
-            elif hasattr(model_fitted, 'named_steps') and 'logisticregression' in getattr(model_fitted, 'named_steps', {}):
-                coefs = model_fitted.named_steps['logisticregression'].coef_[0]
-                importances = pd.Series(np.abs(coefs), index=selected_features)
-            elif clf_name.endswith('(All)'):
-                importances = X_train_selected.var()
-            else:
-                if clf_name.endswith("(Mann-Whitney)"):
-                    stat_results = mw_results
-                elif clf_name.endswith("(Wilcoxon)"):
-                    stat_results = w_results
-                elif clf_name.endswith("(Kruskal)"):
-                    stat_results = k_results
-                elif clf_name.endswith("(Chi-square)"):
-                    stat_results = chi_results
-                elif clf_name.endswith("(Kolmogorov-Smirnov)"):
-                    stat_results = ks_results
-                else:
-                    stat_results = {}
-                importances = pd.Series([1.0 / (stat_results.get(feat, {'p_value': 1.0})['p_value'] + 1e-10)
-                                        for feat in selected_features], index=selected_features)
+                    y_proba = (y_pred == 1).astype(float)
 
-            # Update global feature importance
-            full_importances = pd.Series(0.0, index=X.columns)
-            full_importances[selected_features] = importances.values
-            model_feature_importance += full_importances
-        
-        fold_metrics = calculate_metrics(y_test, y_pred, y_proba)
+                # Save out-of-fold predictions for current test index
+                y_oof[test_idx] = y_proba
+
+                # For feature importance, use model-based importance if available
+                if hasattr(model_fitted, 'feature_importances_'):
+                    importances = pd.Series(model_fitted.feature_importances_, index=selected_features)
+                elif hasattr(model_fitted, 'coef_') and hasattr(model_fitted.coef_, 'shape'):
+                    if len(model_fitted.coef_.shape) > 1:
+                        importances = pd.Series(np.abs(model_fitted.coef_[0]), index=selected_features)
+                    else:
+                        importances = pd.Series(np.abs(model_fitted.coef_), index=selected_features)
+                elif hasattr(model_fitted, 'named_steps') and 'logisticregression' in getattr(model_fitted, 'named_steps', {}):
+                    coefs = model_fitted.named_steps['logisticregression'].coef_[0]
+                    importances = pd.Series(np.abs(coefs), index=selected_features)
+                elif clf_name.endswith('(All)'):
+                    importances = X_train_selected.var()
+                else:
+                    if clf_name.endswith("(Mann-Whitney)"):
+                        stat_results = mw_results
+                    elif clf_name.endswith("(Wilcoxon)"):
+                        stat_results = w_results
+                    elif clf_name.endswith("(Kruskal)"):
+                        stat_results = k_results
+                    elif clf_name.endswith("(Chi-square)"):
+                        stat_results = chi_results
+                    elif clf_name.endswith("(Kolmogorov-Smirnov)"):
+                        stat_results = ks_results
+                    else:
+                        stat_results = {}
+                    importances = pd.Series([1.0 / (stat_results.get(feat, {'p_value': 1.0})['p_value'] + 1e-10)
+                                            for feat in selected_features], index=selected_features)
+
+                # Update global feature importance
+                full_importances = pd.Series(0.0, index=X.columns)
+                full_importances[selected_features] = importances.values
+                model_feature_importance += full_importances
+
+            fold_metrics = calculate_metrics(y_test, y_pred, y_proba)
+            for metric in metrics_history:
+                metrics_history[metric].append(fold_metrics[metric])
+            confusion_matrices.append(fold_metrics['Confusion_Matrix'])
+
+        feature_importance_dict[clf_name] += model_feature_importance
+
+        # After CV, analyze integrated selector stability and store a summary selection (optional)
+        if clf_info.get('selector', None) == 'integrated' and selected_features_per_fold is not None:
+            analyze_integrated_stability(selected_features_per_fold, clf_name)
+            # Add features that appeared in at least one fold to features_summary_data
+            fold_union = sorted(set([f for subset in selected_features_per_fold for f in subset]))
+            for i, feat in enumerate(fold_union):
+                features_summary_data.append({
+                    'Selection_Method': clf_name,
+                    'Feature_Name': feat,
+                    'Rank': i + 1,
+                    'Selection_Type': 'Integrated'
+                })
+
+        # Calculate average metrics and store results
+        avg_metrics = {}
+        std_metrics = {}
         for metric in metrics_history:
-            metrics_history[metric].append(fold_metrics[metric])
-        confusion_matrices.append(fold_metrics['Confusion_Matrix'])
-    
-    feature_importance_dict[clf_name] += model_feature_importance
+            avg_metrics[metric] = np.mean(metrics_history[metric])
+            std_metrics[metric] = np.std(metrics_history[metric])
 
-    # After CV, analyze integrated selector stability and store a summary selection (optional)
-    if clf_info.get('selector', None) == 'integrated' and selected_features_per_fold is not None:
-        analyze_integrated_stability(selected_features_per_fold, clf_name)
-        # Add features that appeared in at least one fold to features_summary_data
-        fold_union = sorted(set([f for subset in selected_features_per_fold for f in subset]))
-        for i, feat in enumerate(fold_union):
-            features_summary_data.append({
-                'Selection_Method': clf_name,
-                'Feature_Name': feat,
-                'Rank': i + 1,
-                'Selection_Type': 'Integrated'
-            })
-    
-    # Calculate average metrics and store results
-    avg_metrics = {}
-    std_metrics = {}
-    for metric in metrics_history:
-        avg_metrics[metric] = np.mean(metrics_history[metric])
-        std_metrics[metric] = np.std(metrics_history[metric])
-    
-    # Store results for this classifier
-    # Try to capture selected feature count if integrated
-    selected_features_count = None
-    if clf_info.get('selector', None) == 'integrated':
-        try:
-            if 'selector' in model_fitted.named_steps and hasattr(model_fitted.named_steps['selector'], 'get_support'):
-                selected_features_count = int(model_fitted.named_steps['selector'].get_support(indices=False).sum())
-            elif 'rfecv' in model_fitted.named_steps and hasattr(model_fitted.named_steps['rfecv'], 'support_'):
-                selected_features_count = int(model_fitted.named_steps['rfecv'].support_.sum())
-        except Exception:
-            selected_features_count = None
+        # Store results for this classifier
+        # Try to capture selected feature count if integrated
+        selected_features_count = None
+        if clf_info.get('selector', None) == 'integrated':
+            try:
+                if 'selector' in model_fitted.named_steps and hasattr(model_fitted.named_steps['selector'], 'get_support'):
+                    selected_features_count = int(model_fitted.named_steps['selector'].get_support(indices=False).sum())
+                elif 'rfecv' in model_fitted.named_steps and hasattr(model_fitted.named_steps['rfecv'], 'support_'):
+                    selected_features_count = int(model_fitted.named_steps['rfecv'].support_.sum())
+            except Exception:
+                selected_features_count = None
 
-    fold_metrics_copy = {m: list(vals) for m, vals in metrics_history.items()}
+        fold_metrics_copy = {m: list(vals) for m, vals in metrics_history.items()}
 
-    # OOF ROC i AUC za ovaj model
-    mask = ~np.isnan(y_oof)
-    if mask.sum() > 0 and np.unique(y.values[mask]).size == 2:
-        fpr, tpr, thresholds = roc_curve(y.values[mask], y_oof[mask])
-        roc_auc_val = auc(fpr, tpr)
-    else:
-        fpr, tpr, roc_auc_val = np.array([0.0, 1.0]), np.array([0.0, 1.0]), float('nan')
+        # OOF ROC and AUC for this model
+        mask = ~np.isnan(y_oof)
+        if mask.sum() > 0 and np.unique(y.values[mask]).size == 2:
+            fpr, tpr, thresholds = roc_curve(y.values[mask], y_oof[mask])
+            roc_auc_val = auc(fpr, tpr)
+        else:
+            fpr, tpr, roc_auc_val = np.array([0.0, 1.0]), np.array([0.0, 1.0]), float('nan')
 
-    all_classifier_results[clf_name] = {
-        'avg_metrics': avg_metrics,
-        'std_metrics': std_metrics,
-        'top_features': (model_feature_importance / kf.cvargs['n_splits']).sort_values(ascending=False).head(10),
-        'confusion_matrix': np.sum(confusion_matrices, axis=0),
-        'total_cv_folds': len(metrics_history['Accuracy']),
-        'selected_features_count': selected_features_count,
-        'fold_metrics': fold_metrics_copy,
-        'roc_curve': {
-            'fpr': fpr.tolist(),
-            'tpr': tpr.tolist(),
-            'auc': float(roc_auc_val)
+        all_classifier_results[clf_name] = {
+            'avg_metrics': avg_metrics,
+            'std_metrics': std_metrics,
+            'top_features': (model_feature_importance / kf.cvargs['n_splits']).sort_values(ascending=False).head(10),
+            'confusion_matrix': np.sum(confusion_matrices, axis=0),
+            'total_cv_folds': len(metrics_history['Accuracy']),
+            'selected_features_count': selected_features_count,
+            'fold_metrics': fold_metrics_copy,
+            'roc_curve': {
+                'fpr': fpr.tolist(),
+                'tpr': tpr.tolist(),
+                'auc': float(roc_auc_val)
+            }
         }
-    }
-    
-    print("\nAverage Performance Metrics:")
-    for metric in metrics_history:
-        print(f"{metric}: {avg_metrics[metric]:.3f} ± {std_metrics[metric]:.3f}")
-    
-    print("\nTop 5 Features:")
-    avg_importance = (model_feature_importance / kf.cvargs['n_splits']).sort_values(ascending=False)
-    for feat, imp in avg_importance.head(5).items():
-        print(f"{feat}: {imp:.4f}")
-    
-    print("\nAggregated Confusion Matrix:")
-    print(all_classifier_results[clf_name]['confusion_matrix'])
+
+        print("\nAverage Performance Metrics:")
+        for metric in metrics_history:
+            print(f"{metric}: {avg_metrics[metric]:.3f} ± {std_metrics[metric]:.3f}")
+
+        print("\nTop 5 Features:")
+        avg_importance = (model_feature_importance / kf.cvargs['n_splits']).sort_values(ascending=False)
+        for feat, imp in avg_importance.head(5).items():
+            print(f"{feat}: {imp:.4f}")
+
+        print("\nAggregated Confusion Matrix:")
+        print(all_classifier_results[clf_name]['confusion_matrix'])
+
+    # Save run-level results to cache
+    try:
+        with open(res_pkl, "wb") as f:
+            pickle.dump(all_classifier_results, f)
+        with open(feat_pkl, "wb") as f:
+            pickle.dump(feature_importance_dict, f)
+        with open(feature_summary_pkl, "wb") as f:
+            pickle.dump(features_summary_data, f)
+        print(f"[CACHE] Spremio rezultate. run_id={run_id}")
+    except Exception as e:
+        print(f"[CACHE] Save failed: {e}")
 
 print("\n" + "="*80)
 print("EXPERIMENT RESULTS SUMMARY")
 print("="*80)
 print(f"Experiment completed at: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-print(f"Dataset: peptide_baza_balanced.csv")
+print(f"Dataset: {dataset_file}")
 print(f"Total samples: {len(y)}")
 print(f"Features used: {X.shape[1]}")
 print(f"Cross-validation: {kf.cvargs['n_splits']}-fold, {kf.n_repeats} repeats")
@@ -1346,7 +1713,14 @@ ts_plot = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
 # Combined ROC for all models
 try:
-    import importlib
+    import importlib, os
+    # Force a non-GUI backend to avoid Tk/Qt dependencies on headless/Windows
+    os.environ.setdefault('MPLBACKEND', 'Agg')
+    mpl = importlib.import_module('matplotlib')
+    try:
+        mpl.use('Agg')
+    except Exception:
+        pass
     plt = importlib.import_module('matplotlib.pyplot')
     plt.figure(figsize=(7, 6))
     for name, res in all_classifier_results.items():
@@ -1397,11 +1771,91 @@ try:
         plt.savefig(fname, dpi=200)
         plt.close()
         print(f"Saved: {fname}")
+
+    # --- Grouped ROC plots by model families ---
+    def plot_group_rocs(all_results, groups, ts_plot):
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        def _match_any(name, substrings):
+            # Require all provided substrings to be present to avoid overmatching across groups
+            name_low = name.lower()
+            return all(s.lower() in name_low for s in substrings)
+
+        for group_name, substrings in groups.items():
+            selected = []
+            for name, res in all_results.items():
+                if _match_any(name, substrings):
+                    roc_info = res.get('roc_curve', {})
+                    fpr = np.array(roc_info.get('fpr', []), dtype=float)
+                    tpr = np.array(roc_info.get('tpr', []), dtype=float)
+                    auc_val = float(roc_info.get('auc', float('nan'))) if 'auc' in roc_info else float('nan')
+                    if fpr.size > 1 and tpr.size > 1 and np.all(np.isfinite(fpr)) and np.all(np.isfinite(tpr)):
+                        selected.append((name, fpr, tpr, auc_val))
+
+            if len(selected) == 0:
+                print(f"[GROUP-ROC] Skipping '{group_name}' (no valid ROC curves).")
+                continue
+
+            plt.figure(figsize=(7, 6))
+            for name, fpr, tpr, auc_val in selected:
+                label = f"{name} (AUC={auc_val:.3f})" if np.isfinite(auc_val) else f"{name} (AUC=NaN)"
+                plt.plot(fpr, tpr, lw=1.5, label=label)
+
+            plt.plot([0, 1], [0, 1], 'k--', lw=1)
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.0])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title(f"ROC (OOF) – {group_name}")
+            plt.legend(loc='lower right', fontsize=7)
+            plt.tight_layout()
+
+            from re import sub
+            def _slug(s):
+                return sub(r'[^A-Za-z0-9]+', '_', s).strip('_')[:60]
+
+            fname = f"roc_group_{_slug(group_name)}_{ts_plot}.png"
+            plt.savefig(fname, dpi=200)
+            plt.close()
+            print(f"[GROUP-ROC] Saved: {fname}")
+
+    groups = {
+        # Baseline full-feature models
+        "Baseline (All features)": ["(All)"],
+
+        # Statistical-selection in-CV variants by base learner
+        "StatSelect – Random Forest": ["Random Forest (", "inCV)"],
+        "StatSelect – Logistic Regression": ["Logistic Regression (", "inCV)"],
+        "StatSelect – SVM": ["SVM (", "inCV)"],
+        "StatSelect – K-Neighbors": ["K-Neighbors (", "inCV)"],
+        "StatSelect – Decision Tree": ["Decision Tree (", "inCV)"],
+        "StatSelect – Naive Bayes": ["Naive Bayes (", "inCV)"],
+
+        # Integrated selectors
+        "Integrated – L1-LR selector": ["Integrated-SelectFromModel (L1-LR selector)"],
+        "Integrated – RF selector": ["Integrated-SelectFromModel (RF selector)"],
+        "Integrated – RFECV (L1-LR)": ["Integrated-RFECV (L1-LR)"],
+    }
+
+    plot_group_rocs(all_classifier_results, groups, ts_plot)
 except Exception as e:
     print(f"[WARN] Skipping ROC plotting due to: {e}")
 
 # Save comprehensive results with timestamp
 timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+# === Global statistical comparisons across models ===
+for metric_name in ['AUC-ROC', 'F1']:
+    out_prefix = f"stats_{metric_name.replace('-', '_')}_{timestamp}"
+    run_statistical_evaluation(
+        all_classifier_results,
+        metric_name=metric_name,
+        alpha=0.05,
+        p_adjust_method='holm',
+        out_prefix=out_prefix
+    )
+
 results_filename = f"feature_selection_results_{dataset_file}_{timestamp}.txt"
 
 with open(results_filename, 'w') as f:
