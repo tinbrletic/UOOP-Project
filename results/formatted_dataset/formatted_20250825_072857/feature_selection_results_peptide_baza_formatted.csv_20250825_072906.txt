@@ -1,0 +1,2002 @@
+PEPTIDE SYNTHESIS PREDICTION - FEATURE SELECTION RESULTS
+================================================================================
+
+Experiment Date: 2025-08-25 07:29:06
+Dataset: peptide_baza_formatted.csv
+Total samples: 1771
+Total features: 465
+Cross-validation: 10-fold, 10 repeats
+Random state: 42
+
+DETAILED PERFORMANCE METRICS:
+================================================================================
+
+Random Forest (All):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.877753 ± 0.010162
+  F1: 0.933971 ± 0.005410
+  AUC-ROC: 0.768235 ± 0.053174
+  Precision: 0.880178 ± 0.007125
+  Recall: 0.994802 ± 0.005665
+  MCC: 0.234811 ± 0.125278
+
+Confusion Matrix (Aggregated):
+  True Negative:     235    False Positive:   2085
+  False Negative:     80    True Positive:   15310
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              0.376498
+   2. hydrophobic_eisenberg          0.324667
+   3. hydrophobic_kyte-doolittle     0.315782
+   4. non-polar_group                0.287066
+   5. boman                          0.254308
+   6. charge                         0.253086
+   7. polar_group                    0.251392
+   8. hydrophobic_engleman           0.246949
+   9. isoelectric_point              0.215197
+  10. cruciani_prp1                  0.211767
+
+================================================================================
+
+Logistic Regression (All):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.762048 ± 0.028907
+  F1: 0.853433 ± 0.019939
+  AUC-ROC: 0.733427 ± 0.055452
+  Precision: 0.916671 ± 0.016018
+  Recall: 0.799094 ± 0.032538
+  MCC: 0.249110 ± 0.077036
+
+Confusion Matrix (Aggregated):
+  True Negative:    1198    False Positive:   1122
+  False Negative:   3092    True Positive:   12298
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    3.607368
+   2. X8_SY                          3.461167
+   3. isoelectric_point              3.326531
+   4. hydrophobic_janin              3.170765
+   5. X8_DK                          2.971523
+   6. X8_FQ                          2.625393
+   7. X8_EW                          2.498616
+   8. tiny_group                     2.486754
+   9. X4_H                           2.471598
+  10. X8_QW                          2.432145
+
+================================================================================
+
+SVM (All):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.869059 ± 0.002215
+  F1: 0.929937 ± 0.001258
+  AUC-ROC: 0.765502 ± 0.052551
+  Precision: 0.869052 ± 0.002195
+  Recall: 1.000000 ± 0.000000
+  MCC: 0.001950 ± 0.019407
+
+Confusion Matrix (Aggregated):
+  True Negative:       1    False Positive:   2319
+  False Negative:      0    True Positive:   15390
+
+Top 10 Features (Average Importance):
+   1. aliphatic_index                16827.215342
+   2. instability_index              10246.494630
+   3. isoelectric_point              92.703679
+   4. aliphatic_group                57.936978
+   5. peptide_len                    56.694269
+   6. acidic_group                   53.282887
+   7. non-polar_group                46.921135
+   8. tiny_group                     46.626308
+   9. charge                         32.229118
+  10. boman                          21.138501
+
+================================================================================
+
+K-Neighbors (All):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.869454 ± 0.003772
+  F1: 0.930084 ± 0.002053
+  AUC-ROC: 0.700430 ± 0.050964
+  Precision: 0.869901 ± 0.003004
+  Recall: 0.999221 ± 0.002301
+  MCC: 0.033972 ± 0.078455
+
+Confusion Matrix (Aggregated):
+  True Negative:      20    False Positive:   2300
+  False Negative:     12    True Positive:   15378
+
+Top 10 Features (Average Importance):
+   1. aliphatic_index                16827.215342
+   2. instability_index              10246.494630
+   3. isoelectric_point              92.703679
+   4. aliphatic_group                57.936978
+   5. peptide_len                    56.694269
+   6. acidic_group                   53.282887
+   7. non-polar_group                46.921135
+   8. tiny_group                     46.626308
+   9. charge                         32.229118
+  10. boman                          21.138501
+
+================================================================================
+
+Decision Tree (All):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.859742 ± 0.015705
+  F1: 0.922551 ± 0.008985
+  AUC-ROC: 0.719951 ± 0.054302
+  Precision: 0.886607 ± 0.010466
+  Recall: 0.961800 ± 0.017301
+  MCC: 0.207952 ± 0.104809
+
+Confusion Matrix (Aggregated):
+  True Negative:     424    False Positive:   1896
+  False Negative:    588    True Positive:   14802
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              2.155241
+   2. peptide_len                    1.252481
+   3. non-polar_group                0.876954
+   4. charge                         0.823980
+   5. hydrophobic_eisenberg          0.427320
+   6. X8_QQ                          0.282769
+   7. X5_P                           0.273216
+   8. hydrophobic_engleman           0.253780
+   9. cruciani_prp3                  0.241862
+  10. polar_group                    0.238495
+
+================================================================================
+
+Naive Bayes (All):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.345113 ± 0.037204
+  F1: 0.420819 ± 0.052549
+  AUC-ROC: 0.671441 ± 0.068944
+  Precision: 0.904130 ± 0.035976
+  Recall: 0.275897 ± 0.044429
+  MCC: 0.061719 ± 0.062997
+
+Confusion Matrix (Aggregated):
+  True Negative:    1866    False Positive:    454
+  False Negative:  11144    True Positive:    4246
+
+Top 10 Features (Average Importance):
+   1. aliphatic_index                16827.215342
+   2. instability_index              10246.494630
+   3. isoelectric_point              92.703679
+   4. aliphatic_group                57.936978
+   5. peptide_len                    56.694269
+   6. acidic_group                   53.282887
+   7. non-polar_group                46.921135
+   8. tiny_group                     46.626308
+   9. charge                         32.229118
+  10. boman                          21.138501
+
+================================================================================
+
+Random Forest (Mann-Whitney):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.874138 ± 0.013658
+  F1: 0.931260 ± 0.007581
+  AUC-ROC: 0.756935 ± 0.050933
+  Precision: 0.886192 ± 0.008814
+  Recall: 0.981289 ± 0.012501
+  MCC: 0.257734 ± 0.106732
+
+Confusion Matrix (Aggregated):
+  True Negative:     379    False Positive:   1941
+  False Negative:    288    True Positive:   15102
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              1.012746
+   2. hydrophobic_eisenberg          1.001852
+   3. charge                         0.894393
+   4. hydrophobic_kyte-doolittle     0.871991
+   5. boman                          0.842770
+   6. hydrophobic_engleman           0.841885
+   7. isoelectric_point              0.764803
+   8. cruciani_prp1                  0.751922
+   9. polar_group                    0.612357
+  10. non-polar_group                0.589299
+
+================================================================================
+
+Random Forest (Wilcoxon):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.876115 ± 0.013595
+  F1: 0.932332 ± 0.007554
+  AUC-ROC: 0.764098 ± 0.050128
+  Precision: 0.887264 ± 0.008200
+  Recall: 0.982327 ± 0.011947
+  MCC: 0.275124 ± 0.104406
+
+Confusion Matrix (Aggregated):
+  True Negative:     398    False Positive:   1922
+  False Negative:    272    True Positive:   15118
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              1.006910
+   2. hydrophobic_eisenberg          0.998205
+   3. charge                         0.900595
+   4. hydrophobic_kyte-doolittle     0.879925
+   5. boman                          0.842142
+   6. hydrophobic_engleman           0.840384
+   7. isoelectric_point              0.767976
+   8. cruciani_prp1                  0.742482
+   9. polar_group                    0.612179
+  10. non-polar_group                0.598620
+
+================================================================================
+
+Random Forest (Kruskal):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.874138 ± 0.013658
+  F1: 0.931260 ± 0.007581
+  AUC-ROC: 0.756935 ± 0.050933
+  Precision: 0.886192 ± 0.008814
+  Recall: 0.981289 ± 0.012501
+  MCC: 0.257734 ± 0.106732
+
+Confusion Matrix (Aggregated):
+  True Negative:     379    False Positive:   1941
+  False Negative:    288    True Positive:   15102
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              1.012746
+   2. hydrophobic_eisenberg          1.001852
+   3. charge                         0.894393
+   4. hydrophobic_kyte-doolittle     0.871991
+   5. boman                          0.842770
+   6. hydrophobic_engleman           0.841885
+   7. isoelectric_point              0.764803
+   8. cruciani_prp1                  0.751922
+   9. polar_group                    0.612357
+  10. non-polar_group                0.589299
+
+================================================================================
+
+Random Forest (Chi-square):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.875154 ± 0.012191
+  F1: 0.931826 ± 0.006755
+  AUC-ROC: 0.758595 ± 0.051094
+  Precision: 0.886624 ± 0.008168
+  Recall: 0.982002 ± 0.011398
+  MCC: 0.264176 ± 0.100727
+
+Confusion Matrix (Aggregated):
+  True Negative:     386    False Positive:   1934
+  False Negative:    277    True Positive:   15113
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              1.008599
+   2. hydrophobic_eisenberg          0.993951
+   3. hydrophobic_kyte-doolittle     0.890146
+   4. charge                         0.886147
+   5. boman                          0.844454
+   6. hydrophobic_engleman           0.834715
+   7. isoelectric_point              0.770436
+   8. cruciani_prp1                  0.750416
+   9. polar_group                    0.609198
+  10. non-polar_group                0.587339
+
+================================================================================
+
+Random Forest (Kolmogorov-Smirnov):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.876116 ± 0.013278
+  F1: 0.932338 ± 0.007374
+  AUC-ROC: 0.758692 ± 0.051212
+  Precision: 0.887228 ± 0.008381
+  Recall: 0.982393 ± 0.011882
+  MCC: 0.273214 ± 0.104011
+
+Confusion Matrix (Aggregated):
+  True Negative:     397    False Positive:   1923
+  False Negative:    271    True Positive:   15119
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              0.982876
+   2. hydrophobic_eisenberg          0.930171
+   3. charge                         0.840694
+   4. hydrophobic_kyte-doolittle     0.839304
+   5. hydrophobic_engleman           0.828574
+   6. boman                          0.804651
+   7. hydrophobic_roseman            0.742190
+   8. isoelectric_point              0.726398
+   9. cruciani_prp1                  0.707637
+  10. polar_group                    0.587861
+
+================================================================================
+
+Logistic Regression (Mann-Whitney):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.703436 ± 0.031536
+  F1: 0.803698 ± 0.024699
+  AUC-ROC: 0.778041 ± 0.046908
+  Precision: 0.943731 ± 0.015743
+  Recall: 0.700715 ± 0.035849
+  MCC: 0.298631 ± 0.061922
+
+Confusion Matrix (Aggregated):
+  True Negative:    1674    False Positive:    646
+  False Negative:   4606    True Positive:   10784
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    5.957432
+   2. hydrophobic_kyte-doolittle     5.503366
+   3. X5_K                           3.701846
+   4. isoelectric_point              2.649808
+   5. X5_A                           1.589090
+   6. charge                         0.288405
+   7. hydrophobic_janin              0.183409
+   8. non-polar_group                0.100204
+   9. aliphatic_group                0.068317
+  10. acidic_group                   0.007568
+
+================================================================================
+
+Logistic Regression (Wilcoxon):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.706090 ± 0.030387
+  F1: 0.805944 ± 0.023495
+  AUC-ROC: 0.776622 ± 0.047814
+  Precision: 0.943440 ± 0.016143
+  Recall: 0.704223 ± 0.034223
+  MCC: 0.299516 ± 0.063542
+
+Confusion Matrix (Aggregated):
+  True Negative:    1667    False Positive:    653
+  False Negative:   4552    True Positive:   10838
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    5.639288
+   2. hydrophobic_kyte-doolittle     5.463534
+   3. X5_K                           3.630262
+   4. isoelectric_point              2.586212
+   5. X5_A                           1.141598
+   6. tiny_group                     0.659684
+   7. charge                         0.438780
+   8. non-polar_group                0.319811
+   9. hydrophobic_janin              0.043865
+  10. acidic_group                   0.017647
+
+================================================================================
+
+Logistic Regression (Kruskal):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.703436 ± 0.031536
+  F1: 0.803698 ± 0.024699
+  AUC-ROC: 0.778041 ± 0.046908
+  Precision: 0.943731 ± 0.015743
+  Recall: 0.700715 ± 0.035849
+  MCC: 0.298631 ± 0.061922
+
+Confusion Matrix (Aggregated):
+  True Negative:    1674    False Positive:    646
+  False Negative:   4606    True Positive:   10784
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    5.957432
+   2. hydrophobic_kyte-doolittle     5.503366
+   3. X5_K                           3.701846
+   4. isoelectric_point              2.649808
+   5. X5_A                           1.589090
+   6. charge                         0.288405
+   7. hydrophobic_janin              0.183409
+   8. non-polar_group                0.100204
+   9. aliphatic_group                0.068317
+  10. acidic_group                   0.007568
+
+================================================================================
+
+Logistic Regression (Chi-square):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.703436 ± 0.031536
+  F1: 0.803698 ± 0.024699
+  AUC-ROC: 0.778041 ± 0.046908
+  Precision: 0.943731 ± 0.015743
+  Recall: 0.700715 ± 0.035849
+  MCC: 0.298631 ± 0.061922
+
+Confusion Matrix (Aggregated):
+  True Negative:    1674    False Positive:    646
+  False Negative:   4606    True Positive:   10784
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    5.957432
+   2. hydrophobic_kyte-doolittle     5.503366
+   3. X5_K                           3.701846
+   4. isoelectric_point              2.649808
+   5. X5_A                           1.589090
+   6. charge                         0.288405
+   7. hydrophobic_janin              0.183409
+   8. non-polar_group                0.100204
+   9. aliphatic_group                0.068317
+  10. acidic_group                   0.007568
+
+================================================================================
+
+Logistic Regression (Kolmogorov-Smirnov):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.693500 ± 0.029234
+  F1: 0.796174 ± 0.022967
+  AUC-ROC: 0.774663 ± 0.047327
+  Precision: 0.941371 ± 0.016179
+  Recall: 0.690519 ± 0.032656
+  MCC: 0.284086 ± 0.061446
+
+Confusion Matrix (Aggregated):
+  True Negative:    1655    False Positive:    665
+  False Negative:   4763    True Positive:   10627
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    5.476342
+   2. hydrophobic_kyte-doolittle     4.319828
+   3. X5_K                           3.617096
+   4. isoelectric_point              2.663096
+   5. non-polar_group                1.524419
+   6. hydrophobic_janin              1.193723
+   7. hydrophobic_roseman            0.411737
+   8. acidic_group                   0.214984
+   9. charge                         0.176984
+  10. cruciani_prp1                  0.030614
+
+================================================================================
+
+SVM (Mann-Whitney):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.874422 ± 0.009666
+  F1: 0.932220 ± 0.005237
+  AUC-ROC: 0.671327 ± 0.064932
+  Precision: 0.877895 ± 0.006539
+  Recall: 0.993763 ± 0.007400
+  MCC: 0.199636 ± 0.114179
+
+Confusion Matrix (Aggregated):
+  True Negative:     192    False Positive:   2128
+  False Negative:     96    True Positive:   15294
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              100000000000.000000
+   2. hydrophobic_kyte-doolittle     99999999999.999985
+   3. non-polar_group                99999999999.999969
+   4. acidic_group                   99999999999.999924
+   5. hydrophobic_eisenberg          99999999999.996613
+   6. cruciani_prp1                  99999999466.546371
+   7. hydrophobic_engleman           99999998703.837555
+   8. boman                          99999998650.202362
+   9. polar_group                    99999998022.278717
+  10. X5_K                           99981201415.651932
+
+================================================================================
+
+SVM (Wilcoxon):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.875156 ± 0.009118
+  F1: 0.932665 ± 0.004907
+  AUC-ROC: 0.687118 ± 0.063687
+  Precision: 0.877768 ± 0.006408
+  Recall: 0.994933 ± 0.006596
+  MCC: 0.202864 ± 0.114950
+
+Confusion Matrix (Aggregated):
+  True Negative:     187    False Positive:   2133
+  False Negative:     78    True Positive:   15312
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              99993527420.115936
+   2. hydrophobic_kyte-doolittle     99966274073.836945
+   3. non-polar_group                99912808279.123199
+   4. acidic_group                   99908496423.288605
+   5. hydrophobic_eisenberg          94692065497.911728
+   6. polar_group                    29626532613.971550
+   7. cruciani_prp1                  4506452925.483247
+   8. boman                          4416857120.217440
+   9. hydrophobic_engleman           3303659473.879582
+  10. X5_A                           994632381.646183
+
+================================================================================
+
+SVM (Kruskal):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.874422 ± 0.009666
+  F1: 0.932220 ± 0.005237
+  AUC-ROC: 0.671327 ± 0.064932
+  Precision: 0.877895 ± 0.006539
+  Recall: 0.993763 ± 0.007400
+  MCC: 0.199636 ± 0.114179
+
+Confusion Matrix (Aggregated):
+  True Negative:     192    False Positive:   2128
+  False Negative:     96    True Positive:   15294
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              100000000000.000000
+   2. hydrophobic_kyte-doolittle     99999999999.999985
+   3. non-polar_group                99999999999.999969
+   4. acidic_group                   99999999999.999924
+   5. hydrophobic_eisenberg          99999999999.996613
+   6. cruciani_prp1                  99999999466.877411
+   7. hydrophobic_engleman           99999998704.632828
+   8. boman                          99999998651.030289
+   9. polar_group                    99999998023.490005
+  10. X5_K                           99981212687.904144
+
+================================================================================
+
+SVM (Chi-square):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.874422 ± 0.009666
+  F1: 0.932220 ± 0.005237
+  AUC-ROC: 0.671327 ± 0.064932
+  Precision: 0.877895 ± 0.006539
+  Recall: 0.993763 ± 0.007400
+  MCC: 0.199636 ± 0.114179
+
+Confusion Matrix (Aggregated):
+  True Negative:     192    False Positive:   2128
+  False Negative:     96    True Positive:   15294
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              99999999999.999985
+   2. hydrophobic_kyte-doolittle     99999999999.997650
+   3. non-polar_group                99999999999.997589
+   4. hydrophobic_eisenberg          99999999999.421722
+   5. acidic_group                   99999999138.730377
+   6. polar_group                    99999997364.581390
+   7. peptide_len                    99999997025.179123
+   8. boman                          99999754381.226883
+   9. cruciani_prp1                  99993924314.496994
+  10. hydrophobic_engleman           99948576003.177567
+
+================================================================================
+
+SVM (Kolmogorov-Smirnov):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.875213 ± 0.009303
+  F1: 0.932653 ± 0.005002
+  AUC-ROC: 0.674276 ± 0.063757
+  Precision: 0.878254 ± 0.006558
+  Recall: 0.994283 ± 0.006577
+  MCC: 0.205631 ± 0.115559
+
+Confusion Matrix (Aggregated):
+  True Negative:     198    False Positive:   2122
+  False Negative:     88    True Positive:   15302
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              99999999999.999985
+   2. hydrophobic_eisenberg          99999999999.961014
+   3. hydrophobic_kyte-doolittle     99999999998.622971
+   4. non-polar_group                99999999914.571609
+   5. peptide_len                    99999958070.939972
+   6. acidic_group                   99999925119.137909
+   7. polar_group                    99999847617.189850
+   8. isoelectric_point              99952900094.400620
+   9. charge                         99952900094.400620
+  10. boman                          99807901488.585114
+
+================================================================================
+
+K-Neighbors (Mann-Whitney):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.871992 ± 0.013654
+  F1: 0.930135 ± 0.007544
+  AUC-ROC: 0.711133 ± 0.056913
+  Precision: 0.884610 ± 0.008526
+  Recall: 0.980702 ± 0.011566
+  MCC: 0.235471 ± 0.111956
+
+Confusion Matrix (Aggregated):
+  True Negative:     350    False Positive:   1970
+  False Negative:    297    True Positive:   15093
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              100000000000.000000
+   2. hydrophobic_kyte-doolittle     99999999999.999985
+   3. non-polar_group                99999999999.999969
+   4. acidic_group                   99999999999.999924
+   5. hydrophobic_eisenberg          99999999999.996613
+   6. cruciani_prp1                  99999999466.546371
+   7. hydrophobic_engleman           99999998703.837555
+   8. boman                          99999998650.202362
+   9. polar_group                    99999998022.278717
+  10. X5_K                           99981201415.651932
+
+================================================================================
+
+K-Neighbors (Wilcoxon):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.873798 ± 0.012551
+  F1: 0.931095 ± 0.007032
+  AUC-ROC: 0.733098 ± 0.055273
+  Precision: 0.885730 ± 0.007815
+  Recall: 0.981482 ± 0.012373
+  MCC: 0.254043 ± 0.098135
+
+Confusion Matrix (Aggregated):
+  True Negative:     370    False Positive:   1950
+  False Negative:    285    True Positive:   15105
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              99993527420.115936
+   2. hydrophobic_kyte-doolittle     99966274073.836945
+   3. non-polar_group                99912808279.123199
+   4. acidic_group                   99908496423.288605
+   5. hydrophobic_eisenberg          94692065497.911728
+   6. polar_group                    29626532613.971550
+   7. cruciani_prp1                  4506452925.483247
+   8. boman                          4416857120.217440
+   9. hydrophobic_engleman           3303659473.879582
+  10. X5_A                           994632381.646183
+
+================================================================================
+
+K-Neighbors (Kruskal):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.871992 ± 0.013654
+  F1: 0.930135 ± 0.007544
+  AUC-ROC: 0.711133 ± 0.056913
+  Precision: 0.884610 ± 0.008526
+  Recall: 0.980702 ± 0.011566
+  MCC: 0.235471 ± 0.111956
+
+Confusion Matrix (Aggregated):
+  True Negative:     350    False Positive:   1970
+  False Negative:    297    True Positive:   15093
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              100000000000.000000
+   2. hydrophobic_kyte-doolittle     99999999999.999985
+   3. non-polar_group                99999999999.999969
+   4. acidic_group                   99999999999.999924
+   5. hydrophobic_eisenberg          99999999999.996613
+   6. cruciani_prp1                  99999999466.877411
+   7. hydrophobic_engleman           99999998704.632828
+   8. boman                          99999998651.030289
+   9. polar_group                    99999998023.490005
+  10. X5_K                           99981212687.904144
+
+================================================================================
+
+K-Neighbors (Chi-square):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.871992 ± 0.013654
+  F1: 0.930135 ± 0.007544
+  AUC-ROC: 0.711133 ± 0.056913
+  Precision: 0.884610 ± 0.008526
+  Recall: 0.980702 ± 0.011566
+  MCC: 0.235471 ± 0.111956
+
+Confusion Matrix (Aggregated):
+  True Negative:     350    False Positive:   1970
+  False Negative:    297    True Positive:   15093
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              99999999999.999985
+   2. hydrophobic_kyte-doolittle     99999999999.997650
+   3. non-polar_group                99999999999.997589
+   4. hydrophobic_eisenberg          99999999999.421722
+   5. acidic_group                   99999999138.730377
+   6. polar_group                    99999997364.581390
+   7. peptide_len                    99999997025.179123
+   8. boman                          99999754381.226883
+   9. cruciani_prp1                  99993924314.496994
+  10. hydrophobic_engleman           99948576003.177567
+
+================================================================================
+
+K-Neighbors (Kolmogorov-Smirnov):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.875043 ± 0.014129
+  F1: 0.931803 ± 0.007726
+  AUC-ROC: 0.707746 ± 0.054268
+  Precision: 0.886246 ± 0.009223
+  Recall: 0.982390 ± 0.010650
+  MCC: 0.258476 ± 0.120350
+
+Confusion Matrix (Aggregated):
+  True Negative:     378    False Positive:   1942
+  False Negative:    271    True Positive:   15119
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              99999999999.999985
+   2. hydrophobic_eisenberg          99999999999.961014
+   3. hydrophobic_kyte-doolittle     99999999998.622971
+   4. non-polar_group                99999999914.571609
+   5. peptide_len                    99999958070.939972
+   6. acidic_group                   99999925119.137909
+   7. polar_group                    99999847617.189850
+   8. isoelectric_point              99952900094.400620
+   9. charge                         99952900094.400620
+  10. boman                          99807901488.585114
+
+================================================================================
+
+Decision Tree (Mann-Whitney):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.866461 ± 0.014822
+  F1: 0.926427 ± 0.008441
+  AUC-ROC: 0.743890 ± 0.048335
+  Precision: 0.888557 ± 0.011117
+  Recall: 0.967967 ± 0.016993
+  MCC: 0.238277 ± 0.108735
+
+Confusion Matrix (Aggregated):
+  True Negative:     448    False Positive:   1872
+  False Negative:    493    True Positive:   14897
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              2.807466
+   2. peptide_len                    1.509570
+   3. charge                         1.132065
+   4. non-polar_group                0.980171
+   5. hydrophobic_eisenberg          0.803095
+   6. isoelectric_point              0.504737
+   7. hydrophobic_engleman           0.489625
+   8. polar_group                    0.348016
+   9. boman                          0.327936
+  10. cruciani_prp1                  0.286394
+
+================================================================================
+
+Decision Tree (Wilcoxon):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.866460 ± 0.014572
+  F1: 0.926383 ± 0.008293
+  AUC-ROC: 0.742280 ± 0.046886
+  Precision: 0.889036 ± 0.011390
+  Recall: 0.967317 ± 0.016974
+  MCC: 0.240555 ± 0.107627
+
+Confusion Matrix (Aggregated):
+  True Negative:     458    False Positive:   1862
+  False Negative:    503    True Positive:   14887
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              2.792020
+   2. peptide_len                    1.516867
+   3. charge                         1.113586
+   4. non-polar_group                0.974739
+   5. hydrophobic_eisenberg          0.798407
+   6. isoelectric_point              0.527279
+   7. hydrophobic_engleman           0.503721
+   8. polar_group                    0.310233
+   9. boman                          0.295073
+  10. cruciani_prp1                  0.257796
+
+================================================================================
+
+Decision Tree (Kruskal):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.866461 ± 0.014822
+  F1: 0.926427 ± 0.008441
+  AUC-ROC: 0.743890 ± 0.048335
+  Precision: 0.888557 ± 0.011117
+  Recall: 0.967967 ± 0.016993
+  MCC: 0.238277 ± 0.108735
+
+Confusion Matrix (Aggregated):
+  True Negative:     448    False Positive:   1872
+  False Negative:    493    True Positive:   14897
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              2.807466
+   2. peptide_len                    1.509570
+   3. charge                         1.132065
+   4. non-polar_group                0.980171
+   5. hydrophobic_eisenberg          0.803095
+   6. isoelectric_point              0.504737
+   7. hydrophobic_engleman           0.489625
+   8. polar_group                    0.348016
+   9. boman                          0.327936
+  10. cruciani_prp1                  0.286394
+
+================================================================================
+
+Decision Tree (Chi-square):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.865953 ± 0.014435
+  F1: 0.926143 ± 0.008219
+  AUC-ROC: 0.743929 ± 0.049640
+  Precision: 0.888352 ± 0.010927
+  Recall: 0.967577 ± 0.016545
+  MCC: 0.234872 ± 0.106429
+
+Confusion Matrix (Aggregated):
+  True Negative:     445    False Positive:   1875
+  False Negative:    499    True Positive:   14891
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              2.801640
+   2. peptide_len                    1.511578
+   3. charge                         1.140137
+   4. non-polar_group                0.978053
+   5. hydrophobic_eisenberg          0.788522
+   6. hydrophobic_engleman           0.553667
+   7. isoelectric_point              0.488709
+   8. boman                          0.316541
+   9. polar_group                    0.299933
+  10. hydrophobic_kyte-doolittle     0.258995
+
+================================================================================
+
+Decision Tree (Kolmogorov-Smirnov):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.865217 ± 0.015550
+  F1: 0.925722 ± 0.008899
+  AUC-ROC: 0.741769 ± 0.049754
+  Precision: 0.888013 ± 0.010636
+  Recall: 0.967058 ± 0.017436
+  MCC: 0.232137 ± 0.107970
+
+Confusion Matrix (Aggregated):
+  True Negative:     440    False Positive:   1880
+  False Negative:    507    True Positive:   14883
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              2.785531
+   2. peptide_len                    1.521584
+   3. charge                         1.088324
+   4. non-polar_group                0.984734
+   5. hydrophobic_eisenberg          0.820789
+   6. isoelectric_point              0.531670
+   7. hydrophobic_engleman           0.523876
+   8. polar_group                    0.347542
+   9. boman                          0.306494
+  10. hydrophobic_kyte-doolittle     0.249032
+
+================================================================================
+
+Naive Bayes (Mann-Whitney):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.790289 ± 0.028508
+  F1: 0.871635 ± 0.019292
+  AUC-ROC: 0.769538 ± 0.050216
+  Precision: 0.929302 ± 0.014094
+  Recall: 0.821315 ± 0.031152
+  MCC: 0.325808 ± 0.071611
+
+Confusion Matrix (Aggregated):
+  True Negative:    1356    False Positive:    964
+  False Negative:   2750    True Positive:   12640
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              100000000000.000000
+   2. hydrophobic_kyte-doolittle     99999999999.999985
+   3. non-polar_group                99999999999.999969
+   4. acidic_group                   99999999999.999924
+   5. hydrophobic_eisenberg          99999999999.996613
+   6. cruciani_prp1                  99999999466.546371
+   7. hydrophobic_engleman           99999998703.837555
+   8. boman                          99999998650.202362
+   9. polar_group                    99999998022.278717
+  10. X5_K                           99981201415.651932
+
+================================================================================
+
+Naive Bayes (Wilcoxon):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.791869 ± 0.027346
+  F1: 0.872805 ± 0.018523
+  AUC-ROC: 0.769405 ± 0.050219
+  Precision: 0.928987 ± 0.014149
+  Recall: 0.823653 ± 0.030616
+  MCC: 0.325911 ± 0.070537
+
+Confusion Matrix (Aggregated):
+  True Negative:    1348    False Positive:    972
+  False Negative:   2714    True Positive:   12676
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              99993527420.115936
+   2. hydrophobic_kyte-doolittle     99966274073.836945
+   3. non-polar_group                99912808279.123199
+   4. acidic_group                   99908496423.288605
+   5. hydrophobic_eisenberg          94692065497.911728
+   6. polar_group                    29626532613.971550
+   7. cruciani_prp1                  4506452925.483247
+   8. boman                          4416857120.217440
+   9. hydrophobic_engleman           3303659473.879582
+  10. X5_A                           994632381.646183
+
+================================================================================
+
+Naive Bayes (Kruskal):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.790289 ± 0.028508
+  F1: 0.871635 ± 0.019292
+  AUC-ROC: 0.769538 ± 0.050216
+  Precision: 0.929302 ± 0.014094
+  Recall: 0.821315 ± 0.031152
+  MCC: 0.325808 ± 0.071611
+
+Confusion Matrix (Aggregated):
+  True Negative:    1356    False Positive:    964
+  False Negative:   2750    True Positive:   12640
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              100000000000.000000
+   2. hydrophobic_kyte-doolittle     99999999999.999985
+   3. non-polar_group                99999999999.999969
+   4. acidic_group                   99999999999.999924
+   5. hydrophobic_eisenberg          99999999999.996613
+   6. cruciani_prp1                  99999999466.877411
+   7. hydrophobic_engleman           99999998704.632828
+   8. boman                          99999998651.030289
+   9. polar_group                    99999998023.490005
+  10. X5_K                           99981212687.904144
+
+================================================================================
+
+Naive Bayes (Chi-square):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.790289 ± 0.028508
+  F1: 0.871635 ± 0.019292
+  AUC-ROC: 0.769538 ± 0.050216
+  Precision: 0.929302 ± 0.014094
+  Recall: 0.821315 ± 0.031152
+  MCC: 0.325808 ± 0.071611
+
+Confusion Matrix (Aggregated):
+  True Negative:    1356    False Positive:    964
+  False Negative:   2750    True Positive:   12640
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              99999999999.999985
+   2. hydrophobic_kyte-doolittle     99999999999.997650
+   3. non-polar_group                99999999999.997589
+   4. hydrophobic_eisenberg          99999999999.421722
+   5. acidic_group                   99999999138.730377
+   6. polar_group                    99999997364.581390
+   7. peptide_len                    99999997025.179123
+   8. boman                          99999754381.226883
+   9. cruciani_prp1                  99993924314.496994
+  10. hydrophobic_engleman           99948576003.177567
+
+================================================================================
+
+Naive Bayes (Kolmogorov-Smirnov):
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.776342 ± 0.028371
+  F1: 0.862248 ± 0.019267
+  AUC-ROC: 0.767785 ± 0.051212
+  Precision: 0.926081 ± 0.014834
+  Recall: 0.807216 ± 0.030193
+  MCC: 0.299210 ± 0.073905
+
+Confusion Matrix (Aggregated):
+  True Negative:    1326    False Positive:    994
+  False Negative:   2967    True Positive:   12423
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              99999999999.999985
+   2. hydrophobic_eisenberg          99999999999.961014
+   3. hydrophobic_kyte-doolittle     99999999998.622971
+   4. non-polar_group                99999999914.571609
+   5. peptide_len                    99999958070.939972
+   6. acidic_group                   99999925119.137909
+   7. polar_group                    99999847617.189850
+   8. isoelectric_point              99952900094.400620
+   9. charge                         99952900094.400620
+  10. boman                          99807901488.585114
+
+================================================================================
+
+Integrated-SelectFromModel (L1-LR selector) + LR:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.775554 ± 0.025169
+  F1: 0.865112 ± 0.016341
+  AUC-ROC: 0.678836 ± 0.062900
+  Precision: 0.904722 ± 0.016678
+  Recall: 0.829377 ± 0.026689
+  MCC: 0.207313 ± 0.087937
+
+Confusion Matrix (Aggregated):
+  True Negative:     971    False Positive:   1349
+  False Negative:   2626    True Positive:   12764
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    3.607368
+   2. hydrophobic_janin              3.170765
+   3. acidic_group                   2.486392
+   4. X8_SY                          2.240780
+   5. isoelectric_point              2.048503
+   6. X8_DK                          1.819990
+   7. X8_FQ                          1.729596
+   8. X4_H                           1.726884
+   9. X8_IV                          1.623233
+  10. X8_EW                          1.621972
+
+================================================================================
+
+Integrated-SelectFromModel (L1-LR selector) + SVM:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.869116 ± 0.002310
+  F1: 0.929966 ± 0.001302
+  AUC-ROC: 0.759813 ± 0.055031
+  Precision: 0.869102 ± 0.002271
+  Recall: 1.000000 ± 0.000000
+  MCC: 0.003901 ± 0.027307
+
+Confusion Matrix (Aggregated):
+  True Negative:       2    False Positive:   2318
+  False Negative:      0    True Positive:   15390
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    3.607368
+   2. hydrophobic_janin              3.170765
+   3. acidic_group                   2.486392
+   4. X8_SY                          2.240780
+   5. isoelectric_point              2.048503
+   6. X8_DK                          1.819990
+   7. X8_FQ                          1.729596
+   8. X4_H                           1.726884
+   9. X8_IV                          1.623233
+  10. X8_EW                          1.621972
+
+================================================================================
+
+Integrated-SelectFromModel (L1-LR selector) + KNN:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.869680 ± 0.003642
+  F1: 0.930205 ± 0.001978
+  AUC-ROC: 0.694198 ± 0.056623
+  Precision: 0.870014 ± 0.002908
+  Recall: 0.999351 ± 0.002154
+  MCC: 0.039445 ± 0.080983
+
+Confusion Matrix (Aggregated):
+  True Negative:      22    False Positive:   2298
+  False Negative:     10    True Positive:   15380
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    3.607368
+   2. hydrophobic_janin              3.170765
+   3. acidic_group                   2.486392
+   4. X8_SY                          2.240780
+   5. isoelectric_point              2.048503
+   6. X8_DK                          1.819990
+   7. X8_FQ                          1.729596
+   8. X4_H                           1.726884
+   9. X8_IV                          1.623233
+  10. X8_EW                          1.621972
+
+================================================================================
+
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.335403 ± 0.038104
+  F1: 0.406500 ± 0.055710
+  AUC-ROC: 0.661577 ± 0.070276
+  Precision: 0.902028 ± 0.037430
+  Recall: 0.264203 ± 0.045994
+  MCC: 0.056228 ± 0.063233
+
+Confusion Matrix (Aggregated):
+  True Negative:    1874    False Positive:    446
+  False Negative:  11324    True Positive:    4066
+
+Top 10 Features (Average Importance):
+   1. peptide_len                    3.607368
+   2. hydrophobic_janin              3.170765
+   3. acidic_group                   2.486392
+   4. X8_SY                          2.240780
+   5. isoelectric_point              2.048503
+   6. X8_DK                          1.819990
+   7. X8_FQ                          1.729596
+   8. X4_H                           1.726884
+   9. X8_IV                          1.623233
+  10. X8_EW                          1.621972
+
+================================================================================
+
+Integrated-SelectFromModel (RF selector) + RF:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.878375 ± 0.010164
+  F1: 0.934248 ± 0.005470
+  AUC-ROC: 0.770392 ± 0.049905
+  Precision: 0.881084 ± 0.006890
+  Recall: 0.994282 ± 0.006769
+  MCC: 0.249953 ± 0.114329
+
+Confusion Matrix (Aggregated):
+  True Negative:     254    False Positive:   2066
+  False Negative:     88    True Positive:   15302
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              0.279276
+   2. hydrophobic_eisenberg          0.266678
+   3. hydrophobic_kyte-doolittle     0.258740
+   4. boman                          0.224521
+   5. hydrophobic_engleman           0.222293
+   6. charge                         0.221874
+   7. non-polar_group                0.218465
+   8. isoelectric_point              0.203328
+   9. cruciani_prp1                  0.200521
+  10. cruciani_prp3                  0.200234
+
+================================================================================
+
+Integrated-SelectFromModel (RF selector) + LR:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.747995 ± 0.029578
+  F1: 0.843784 ± 0.020617
+  AUC-ROC: 0.706023 ± 0.053406
+  Precision: 0.912948 ± 0.014569
+  Recall: 0.784993 ± 0.032029
+  MCC: 0.224187 ± 0.072983
+
+Confusion Matrix (Aggregated):
+  True Negative:    1166    False Positive:   1154
+  False Negative:   3309    True Positive:   12081
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              0.279276
+   2. hydrophobic_eisenberg          0.266678
+   3. hydrophobic_kyte-doolittle     0.258740
+   4. boman                          0.224521
+   5. hydrophobic_engleman           0.222293
+   6. charge                         0.221874
+   7. non-polar_group                0.218465
+   8. isoelectric_point              0.203328
+   9. cruciani_prp1                  0.200521
+  10. cruciani_prp3                  0.200234
+
+================================================================================
+
+Integrated-SelectFromModel (RF selector) + KNN:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.869511 ± 0.002639
+  F1: 0.930159 ± 0.001444
+  AUC-ROC: 0.635645 ± 0.055465
+  Precision: 0.869488 ± 0.002471
+  Recall: 0.999935 ± 0.000646
+  MCC: 0.019072 ± 0.058264
+
+Confusion Matrix (Aggregated):
+  True Negative:      10    False Positive:   2310
+  False Negative:      1    True Positive:   15389
+
+Top 10 Features (Average Importance):
+   1. hydrophobic_janin              0.279276
+   2. hydrophobic_eisenberg          0.266678
+   3. hydrophobic_kyte-doolittle     0.258740
+   4. boman                          0.224521
+   5. hydrophobic_engleman           0.222293
+   6. charge                         0.221874
+   7. non-polar_group                0.218465
+   8. isoelectric_point              0.203328
+   9. cruciani_prp1                  0.200521
+  10. cruciani_prp3                  0.200234
+
+================================================================================
+
+Integrated-RFECV (L1-LR) + LR:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.774468 ± 0.027837
+  F1: 0.863685 ± 0.018436
+  AUC-ROC: 0.689862 ± 0.062451
+  Precision: 0.908563 ± 0.017341
+  Recall: 0.823720 ± 0.030288
+  MCC: 0.223839 ± 0.091287
+
+Confusion Matrix (Aggregated):
+  True Negative:    1039    False Positive:   1281
+  False Negative:   2713    True Positive:   12677
+
+Top 10 Features (Average Importance):
+   1. isoelectric_point              9.883020
+   2. peptide_len                    9.879428
+   3. X8_SY                          9.866017
+   4. X8_DK                          9.857628
+   5. X8_EW                          9.853214
+   6. X8_FQ                          9.853150
+   7. X8_QW                          9.851285
+   8. X4_H                           9.850790
+   9. X8_IC                          9.842643
+  10. X8_NG                          9.841355
+
+================================================================================
+
+Integrated-RFECV (L1-LR) + KNN:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.869963 ± 0.005191
+  F1: 0.930294 ± 0.002730
+  AUC-ROC: 0.689312 ± 0.057159
+  Precision: 0.870820 ± 0.004351
+  Recall: 0.998506 ± 0.003026
+  MCC: 0.053366 ± 0.101748
+
+Confusion Matrix (Aggregated):
+  True Negative:      40    False Positive:   2280
+  False Negative:     23    True Positive:   15367
+
+Top 10 Features (Average Importance):
+   1. isoelectric_point              9.883020
+   2. peptide_len                    9.879428
+   3. X8_SY                          9.866017
+   4. X8_DK                          9.857628
+   5. X8_EW                          9.853214
+   6. X8_FQ                          9.853150
+   7. X8_QW                          9.851285
+   8. X4_H                           9.850790
+   9. X8_IC                          9.842643
+  10. X8_NG                          9.841355
+
+================================================================================
+
+Integrated-RFECV (L1-LR) + Naive Bayes:
+----------------------------------------
+Total CV iterations: 100
+
+Performance Metrics:
+  Accuracy: 0.318804 ± 0.036438
+  F1: 0.380924 ± 0.054774
+  AUC-ROC: 0.648150 ± 0.072353
+  Precision: 0.900482 ± 0.041622
+  Recall: 0.243203 ± 0.043654
+  MCC: 0.050842 ± 0.066359
+
+Confusion Matrix (Aggregated):
+  True Negative:    1903    False Positive:    417
+  False Negative:  11647    True Positive:    3743
+
+Top 10 Features (Average Importance):
+   1. isoelectric_point              9.883020
+   2. peptide_len                    9.879428
+   3. X8_SY                          9.866017
+   4. X8_DK                          9.857628
+   5. X8_EW                          9.853214
+   6. X8_FQ                          9.853150
+   7. X8_QW                          9.851285
+   8. X4_H                           9.850790
+   9. X8_IC                          9.842643
+  10. X8_NG                          9.841355
+
+================================================================================
+
+CLASSIFIER COMPARISON SUMMARY:
+================================================================================
+Classifier           Accuracy     F1-Score     Precision    Recall       AUC-ROC     
+--------------------------------------------------------------------------------
+Random Forest (All)  0.8778       0.9340       0.8802       0.9948       0.7682      
+Logistic Regression (All) 0.7620       0.8534       0.9167       0.7991       0.7334      
+SVM (All)            0.8691       0.9299       0.8691       1.0000       0.7655      
+K-Neighbors (All)    0.8695       0.9301       0.8699       0.9992       0.7004      
+Decision Tree (All)  0.8597       0.9226       0.8866       0.9618       0.7200      
+Naive Bayes (All)    0.3451       0.4208       0.9041       0.2759       0.6714      
+Random Forest (Mann-Whitney) 0.8741       0.9313       0.8862       0.9813       0.7569      
+Random Forest (Wilcoxon) 0.8761       0.9323       0.8873       0.9823       0.7641      
+Random Forest (Kruskal) 0.8741       0.9313       0.8862       0.9813       0.7569      
+Random Forest (Chi-square) 0.8752       0.9318       0.8866       0.9820       0.7586      
+Random Forest (Kolmogorov-Smirnov) 0.8761       0.9323       0.8872       0.9824       0.7587      
+Logistic Regression (Mann-Whitney) 0.7034       0.8037       0.9437       0.7007       0.7780      
+Logistic Regression (Wilcoxon) 0.7061       0.8059       0.9434       0.7042       0.7766      
+Logistic Regression (Kruskal) 0.7034       0.8037       0.9437       0.7007       0.7780      
+Logistic Regression (Chi-square) 0.7034       0.8037       0.9437       0.7007       0.7780      
+Logistic Regression (Kolmogorov-Smirnov) 0.6935       0.7962       0.9414       0.6905       0.7747      
+SVM (Mann-Whitney)   0.8744       0.9322       0.8779       0.9938       0.6713      
+SVM (Wilcoxon)       0.8752       0.9327       0.8778       0.9949       0.6871      
+SVM (Kruskal)        0.8744       0.9322       0.8779       0.9938       0.6713      
+SVM (Chi-square)     0.8744       0.9322       0.8779       0.9938       0.6713      
+SVM (Kolmogorov-Smirnov) 0.8752       0.9327       0.8783       0.9943       0.6743      
+K-Neighbors (Mann-Whitney) 0.8720       0.9301       0.8846       0.9807       0.7111      
+K-Neighbors (Wilcoxon) 0.8738       0.9311       0.8857       0.9815       0.7331      
+K-Neighbors (Kruskal) 0.8720       0.9301       0.8846       0.9807       0.7111      
+K-Neighbors (Chi-square) 0.8720       0.9301       0.8846       0.9807       0.7111      
+K-Neighbors (Kolmogorov-Smirnov) 0.8750       0.9318       0.8862       0.9824       0.7077      
+Decision Tree (Mann-Whitney) 0.8665       0.9264       0.8886       0.9680       0.7439      
+Decision Tree (Wilcoxon) 0.8665       0.9264       0.8890       0.9673       0.7423      
+Decision Tree (Kruskal) 0.8665       0.9264       0.8886       0.9680       0.7439      
+Decision Tree (Chi-square) 0.8660       0.9261       0.8884       0.9676       0.7439      
+Decision Tree (Kolmogorov-Smirnov) 0.8652       0.9257       0.8880       0.9671       0.7418      
+Naive Bayes (Mann-Whitney) 0.7903       0.8716       0.9293       0.8213       0.7695      
+Naive Bayes (Wilcoxon) 0.7919       0.8728       0.9290       0.8237       0.7694      
+Naive Bayes (Kruskal) 0.7903       0.8716       0.9293       0.8213       0.7695      
+Naive Bayes (Chi-square) 0.7903       0.8716       0.9293       0.8213       0.7695      
+Naive Bayes (Kolmogorov-Smirnov) 0.7763       0.8622       0.9261       0.8072       0.7678      
+Integrated-SelectFromModel (L1-LR selector) + LR 0.7756       0.8651       0.9047       0.8294       0.6788      
+Integrated-SelectFromModel (L1-LR selector) + SVM 0.8691       0.9300       0.8691       1.0000       0.7598      
+Integrated-SelectFromModel (L1-LR selector) + KNN 0.8697       0.9302       0.8700       0.9994       0.6942      
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes 0.3354       0.4065       0.9020       0.2642       0.6616      
+Integrated-SelectFromModel (RF selector) + RF 0.8784       0.9342       0.8811       0.9943       0.7704      
+Integrated-SelectFromModel (RF selector) + LR 0.7480       0.8438       0.9129       0.7850       0.7060      
+Integrated-SelectFromModel (RF selector) + KNN 0.8695       0.9302       0.8695       0.9999       0.6356      
+Integrated-RFECV (L1-LR) + LR 0.7745       0.8637       0.9086       0.8237       0.6899      
+Integrated-RFECV (L1-LR) + KNN 0.8700       0.9303       0.8708       0.9985       0.6893      
+Integrated-RFECV (L1-LR) + Naive Bayes 0.3188       0.3809       0.9005       0.2432       0.6482      
+
+================================================================================
+
+FEATURE IMPORTANCE SUMMARY:
+--------------------------------------------------
+
+Random Forest (All) - Top 10 Features:
+  hydrophobic_janin: 3.764983
+  hydrophobic_eisenberg: 3.246674
+  hydrophobic_kyte-doolittle: 3.157821
+  non-polar_group: 2.870664
+  boman: 2.543085
+  charge: 2.530862
+  polar_group: 2.513919
+  hydrophobic_engleman: 2.469486
+  isoelectric_point: 2.151967
+  cruciani_prp1: 2.117669
+
+Logistic Regression (All) - Top 10 Features:
+  peptide_len: 36.073676
+  X8_SY: 34.611667
+  isoelectric_point: 33.265310
+  hydrophobic_janin: 31.707650
+  X8_DK: 29.715228
+  X8_FQ: 26.253932
+  X8_EW: 24.986160
+  tiny_group: 24.867537
+  X4_H: 24.715985
+  X8_QW: 24.321455
+
+SVM (All) - Top 10 Features:
+  aliphatic_index: 168272.153419
+  instability_index: 102464.946295
+  isoelectric_point: 927.036791
+  aliphatic_group: 579.369783
+  peptide_len: 566.942693
+  acidic_group: 532.828874
+  non-polar_group: 469.211351
+  tiny_group: 466.263084
+  charge: 322.291177
+  boman: 211.385012
+
+K-Neighbors (All) - Top 10 Features:
+  aliphatic_index: 168272.153419
+  instability_index: 102464.946295
+  isoelectric_point: 927.036791
+  aliphatic_group: 579.369783
+  peptide_len: 566.942693
+  acidic_group: 532.828874
+  non-polar_group: 469.211351
+  tiny_group: 466.263084
+  charge: 322.291177
+  boman: 211.385012
+
+Decision Tree (All) - Top 10 Features:
+  hydrophobic_janin: 21.552410
+  peptide_len: 12.524806
+  non-polar_group: 8.769536
+  charge: 8.239803
+  hydrophobic_eisenberg: 4.273196
+  X8_QQ: 2.827689
+  X5_P: 2.732160
+  hydrophobic_engleman: 2.537801
+  cruciani_prp3: 2.418620
+  polar_group: 2.384954
+
+Naive Bayes (All) - Top 10 Features:
+  aliphatic_index: 168272.153419
+  instability_index: 102464.946295
+  isoelectric_point: 927.036791
+  aliphatic_group: 579.369783
+  peptide_len: 566.942693
+  acidic_group: 532.828874
+  non-polar_group: 469.211351
+  tiny_group: 466.263084
+  charge: 322.291177
+  boman: 211.385012
+
+Random Forest (Mann-Whitney) - Top 10 Features:
+  hydrophobic_janin: 10.127465
+  hydrophobic_eisenberg: 10.018518
+  charge: 8.943928
+  hydrophobic_kyte-doolittle: 8.719911
+  boman: 8.427698
+  hydrophobic_engleman: 8.418848
+  isoelectric_point: 7.648030
+  cruciani_prp1: 7.519217
+  polar_group: 6.123573
+  non-polar_group: 5.892992
+
+Random Forest (Wilcoxon) - Top 10 Features:
+  hydrophobic_janin: 10.069100
+  hydrophobic_eisenberg: 9.982054
+  charge: 9.005955
+  hydrophobic_kyte-doolittle: 8.799251
+  boman: 8.421418
+  hydrophobic_engleman: 8.403837
+  isoelectric_point: 7.679760
+  cruciani_prp1: 7.424822
+  polar_group: 6.121786
+  non-polar_group: 5.986197
+
+Random Forest (Kruskal) - Top 10 Features:
+  hydrophobic_janin: 10.127465
+  hydrophobic_eisenberg: 10.018518
+  charge: 8.943928
+  hydrophobic_kyte-doolittle: 8.719911
+  boman: 8.427698
+  hydrophobic_engleman: 8.418848
+  isoelectric_point: 7.648030
+  cruciani_prp1: 7.519217
+  polar_group: 6.123573
+  non-polar_group: 5.892992
+
+Random Forest (Chi-square) - Top 10 Features:
+  hydrophobic_janin: 10.085992
+  hydrophobic_eisenberg: 9.939506
+  hydrophobic_kyte-doolittle: 8.901462
+  charge: 8.861470
+  boman: 8.444543
+  hydrophobic_engleman: 8.347147
+  isoelectric_point: 7.704356
+  cruciani_prp1: 7.504161
+  polar_group: 6.091985
+  non-polar_group: 5.873391
+
+Random Forest (Kolmogorov-Smirnov) - Top 10 Features:
+  hydrophobic_janin: 9.828756
+  hydrophobic_eisenberg: 9.301709
+  charge: 8.406941
+  hydrophobic_kyte-doolittle: 8.393042
+  hydrophobic_engleman: 8.285741
+  boman: 8.046514
+  hydrophobic_roseman: 7.421902
+  isoelectric_point: 7.263977
+  cruciani_prp1: 7.076366
+  polar_group: 5.878614
+
+Logistic Regression (Mann-Whitney) - Top 10 Features:
+  peptide_len: 59.574320
+  hydrophobic_kyte-doolittle: 55.033657
+  X5_K: 37.018457
+  isoelectric_point: 26.498079
+  X5_A: 15.890898
+  charge: 2.884045
+  hydrophobic_janin: 1.834095
+  non-polar_group: 1.002043
+  aliphatic_group: 0.683170
+  acidic_group: 0.075678
+
+Logistic Regression (Wilcoxon) - Top 10 Features:
+  peptide_len: 56.392884
+  hydrophobic_kyte-doolittle: 54.635343
+  X5_K: 36.302619
+  isoelectric_point: 25.862119
+  X5_A: 11.415979
+  tiny_group: 6.596836
+  charge: 4.387801
+  non-polar_group: 3.198110
+  hydrophobic_janin: 0.438654
+  acidic_group: 0.176474
+
+Logistic Regression (Kruskal) - Top 10 Features:
+  peptide_len: 59.574320
+  hydrophobic_kyte-doolittle: 55.033657
+  X5_K: 37.018457
+  isoelectric_point: 26.498079
+  X5_A: 15.890898
+  charge: 2.884045
+  hydrophobic_janin: 1.834095
+  non-polar_group: 1.002043
+  aliphatic_group: 0.683170
+  acidic_group: 0.075678
+
+Logistic Regression (Chi-square) - Top 10 Features:
+  peptide_len: 59.574320
+  hydrophobic_kyte-doolittle: 55.033657
+  X5_K: 37.018457
+  isoelectric_point: 26.498079
+  X5_A: 15.890898
+  charge: 2.884045
+  hydrophobic_janin: 1.834095
+  non-polar_group: 1.002043
+  aliphatic_group: 0.683170
+  acidic_group: 0.075678
+
+Logistic Regression (Kolmogorov-Smirnov) - Top 10 Features:
+  peptide_len: 54.763419
+  hydrophobic_kyte-doolittle: 43.198283
+  X5_K: 36.170958
+  isoelectric_point: 26.630964
+  non-polar_group: 15.244194
+  hydrophobic_janin: 11.937233
+  hydrophobic_roseman: 4.117371
+  acidic_group: 2.149843
+  charge: 1.769838
+  cruciani_prp1: 0.306141
+
+SVM (Mann-Whitney) - Top 10 Features:
+  hydrophobic_janin: 1000000000000.000000
+  hydrophobic_kyte-doolittle: 999999999999.999878
+  non-polar_group: 999999999999.999756
+  acidic_group: 999999999999.999268
+  hydrophobic_eisenberg: 999999999999.966064
+  cruciani_prp1: 999999994665.463745
+  hydrophobic_engleman: 999999987038.375610
+  boman: 999999986502.023682
+  polar_group: 999999980222.787231
+  X5_K: 999812014156.519287
+
+SVM (Wilcoxon) - Top 10 Features:
+  hydrophobic_janin: 999935274201.159424
+  hydrophobic_kyte-doolittle: 999662740738.369385
+  non-polar_group: 999128082791.232056
+  acidic_group: 999084964232.885986
+  hydrophobic_eisenberg: 946920654979.117310
+  polar_group: 296265326139.715515
+  cruciani_prp1: 45064529254.832466
+  boman: 44168571202.174393
+  hydrophobic_engleman: 33036594738.795826
+  X5_A: 9946323816.461830
+
+SVM (Kruskal) - Top 10 Features:
+  hydrophobic_janin: 1000000000000.000000
+  hydrophobic_kyte-doolittle: 999999999999.999878
+  non-polar_group: 999999999999.999756
+  acidic_group: 999999999999.999268
+  hydrophobic_eisenberg: 999999999999.966064
+  cruciani_prp1: 999999994668.774170
+  hydrophobic_engleman: 999999987046.328247
+  boman: 999999986510.302856
+  polar_group: 999999980234.900024
+  X5_K: 999812126879.041382
+
+SVM (Chi-square) - Top 10 Features:
+  hydrophobic_janin: 999999999999.999878
+  hydrophobic_kyte-doolittle: 999999999999.976440
+  non-polar_group: 999999999999.975830
+  hydrophobic_eisenberg: 999999999994.217285
+  acidic_group: 999999991387.303833
+  polar_group: 999999973645.813843
+  peptide_len: 999999970251.791260
+  boman: 999997543812.268799
+  cruciani_prp1: 999939243144.969971
+  hydrophobic_engleman: 999485760031.775635
+
+SVM (Kolmogorov-Smirnov) - Top 10 Features:
+  hydrophobic_janin: 999999999999.999878
+  hydrophobic_eisenberg: 999999999999.610107
+  hydrophobic_kyte-doolittle: 999999999986.229736
+  non-polar_group: 999999999145.716064
+  peptide_len: 999999580709.399658
+  acidic_group: 999999251191.379150
+  polar_group: 999998476171.898560
+  isoelectric_point: 999529000944.006226
+  charge: 999529000944.006226
+  boman: 998079014885.851196
+
+K-Neighbors (Mann-Whitney) - Top 10 Features:
+  hydrophobic_janin: 1000000000000.000000
+  hydrophobic_kyte-doolittle: 999999999999.999878
+  non-polar_group: 999999999999.999756
+  acidic_group: 999999999999.999268
+  hydrophobic_eisenberg: 999999999999.966064
+  cruciani_prp1: 999999994665.463745
+  hydrophobic_engleman: 999999987038.375610
+  boman: 999999986502.023682
+  polar_group: 999999980222.787231
+  X5_K: 999812014156.519287
+
+K-Neighbors (Wilcoxon) - Top 10 Features:
+  hydrophobic_janin: 999935274201.159424
+  hydrophobic_kyte-doolittle: 999662740738.369385
+  non-polar_group: 999128082791.232056
+  acidic_group: 999084964232.885986
+  hydrophobic_eisenberg: 946920654979.117310
+  polar_group: 296265326139.715515
+  cruciani_prp1: 45064529254.832466
+  boman: 44168571202.174393
+  hydrophobic_engleman: 33036594738.795826
+  X5_A: 9946323816.461830
+
+K-Neighbors (Kruskal) - Top 10 Features:
+  hydrophobic_janin: 1000000000000.000000
+  hydrophobic_kyte-doolittle: 999999999999.999878
+  non-polar_group: 999999999999.999756
+  acidic_group: 999999999999.999268
+  hydrophobic_eisenberg: 999999999999.966064
+  cruciani_prp1: 999999994668.774170
+  hydrophobic_engleman: 999999987046.328247
+  boman: 999999986510.302856
+  polar_group: 999999980234.900024
+  X5_K: 999812126879.041382
+
+K-Neighbors (Chi-square) - Top 10 Features:
+  hydrophobic_janin: 999999999999.999878
+  hydrophobic_kyte-doolittle: 999999999999.976440
+  non-polar_group: 999999999999.975830
+  hydrophobic_eisenberg: 999999999994.217285
+  acidic_group: 999999991387.303833
+  polar_group: 999999973645.813843
+  peptide_len: 999999970251.791260
+  boman: 999997543812.268799
+  cruciani_prp1: 999939243144.969971
+  hydrophobic_engleman: 999485760031.775635
+
+K-Neighbors (Kolmogorov-Smirnov) - Top 10 Features:
+  hydrophobic_janin: 999999999999.999878
+  hydrophobic_eisenberg: 999999999999.610107
+  hydrophobic_kyte-doolittle: 999999999986.229736
+  non-polar_group: 999999999145.716064
+  peptide_len: 999999580709.399658
+  acidic_group: 999999251191.379150
+  polar_group: 999998476171.898560
+  isoelectric_point: 999529000944.006226
+  charge: 999529000944.006226
+  boman: 998079014885.851196
+
+Decision Tree (Mann-Whitney) - Top 10 Features:
+  hydrophobic_janin: 28.074658
+  peptide_len: 15.095704
+  charge: 11.320645
+  non-polar_group: 9.801709
+  hydrophobic_eisenberg: 8.030948
+  isoelectric_point: 5.047365
+  hydrophobic_engleman: 4.896249
+  polar_group: 3.480160
+  boman: 3.279363
+  cruciani_prp1: 2.863944
+
+Decision Tree (Wilcoxon) - Top 10 Features:
+  hydrophobic_janin: 27.920204
+  peptide_len: 15.168665
+  charge: 11.135857
+  non-polar_group: 9.747390
+  hydrophobic_eisenberg: 7.984065
+  isoelectric_point: 5.272787
+  hydrophobic_engleman: 5.037208
+  polar_group: 3.102327
+  boman: 2.950733
+  cruciani_prp1: 2.577956
+
+Decision Tree (Kruskal) - Top 10 Features:
+  hydrophobic_janin: 28.074658
+  peptide_len: 15.095704
+  charge: 11.320645
+  non-polar_group: 9.801709
+  hydrophobic_eisenberg: 8.030948
+  isoelectric_point: 5.047365
+  hydrophobic_engleman: 4.896249
+  polar_group: 3.480160
+  boman: 3.279363
+  cruciani_prp1: 2.863944
+
+Decision Tree (Chi-square) - Top 10 Features:
+  hydrophobic_janin: 28.016401
+  peptide_len: 15.115781
+  charge: 11.401373
+  non-polar_group: 9.780534
+  hydrophobic_eisenberg: 7.885222
+  hydrophobic_engleman: 5.536667
+  isoelectric_point: 4.887093
+  boman: 3.165406
+  polar_group: 2.999327
+  hydrophobic_kyte-doolittle: 2.589952
+
+Decision Tree (Kolmogorov-Smirnov) - Top 10 Features:
+  hydrophobic_janin: 27.855314
+  peptide_len: 15.215839
+  charge: 10.883241
+  non-polar_group: 9.847337
+  hydrophobic_eisenberg: 8.207895
+  isoelectric_point: 5.316701
+  hydrophobic_engleman: 5.238763
+  polar_group: 3.475417
+  boman: 3.064939
+  hydrophobic_kyte-doolittle: 2.490321
+
+Naive Bayes (Mann-Whitney) - Top 10 Features:
+  hydrophobic_janin: 1000000000000.000000
+  hydrophobic_kyte-doolittle: 999999999999.999878
+  non-polar_group: 999999999999.999756
+  acidic_group: 999999999999.999268
+  hydrophobic_eisenberg: 999999999999.966064
+  cruciani_prp1: 999999994665.463745
+  hydrophobic_engleman: 999999987038.375610
+  boman: 999999986502.023682
+  polar_group: 999999980222.787231
+  X5_K: 999812014156.519287
+
+Naive Bayes (Wilcoxon) - Top 10 Features:
+  hydrophobic_janin: 999935274201.159424
+  hydrophobic_kyte-doolittle: 999662740738.369385
+  non-polar_group: 999128082791.232056
+  acidic_group: 999084964232.885986
+  hydrophobic_eisenberg: 946920654979.117310
+  polar_group: 296265326139.715515
+  cruciani_prp1: 45064529254.832466
+  boman: 44168571202.174393
+  hydrophobic_engleman: 33036594738.795826
+  X5_A: 9946323816.461830
+
+Naive Bayes (Kruskal) - Top 10 Features:
+  hydrophobic_janin: 1000000000000.000000
+  hydrophobic_kyte-doolittle: 999999999999.999878
+  non-polar_group: 999999999999.999756
+  acidic_group: 999999999999.999268
+  hydrophobic_eisenberg: 999999999999.966064
+  cruciani_prp1: 999999994668.774170
+  hydrophobic_engleman: 999999987046.328247
+  boman: 999999986510.302856
+  polar_group: 999999980234.900024
+  X5_K: 999812126879.041382
+
+Naive Bayes (Chi-square) - Top 10 Features:
+  hydrophobic_janin: 999999999999.999878
+  hydrophobic_kyte-doolittle: 999999999999.976440
+  non-polar_group: 999999999999.975830
+  hydrophobic_eisenberg: 999999999994.217285
+  acidic_group: 999999991387.303833
+  polar_group: 999999973645.813843
+  peptide_len: 999999970251.791260
+  boman: 999997543812.268799
+  cruciani_prp1: 999939243144.969971
+  hydrophobic_engleman: 999485760031.775635
+
+Naive Bayes (Kolmogorov-Smirnov) - Top 10 Features:
+  hydrophobic_janin: 999999999999.999878
+  hydrophobic_eisenberg: 999999999999.610107
+  hydrophobic_kyte-doolittle: 999999999986.229736
+  non-polar_group: 999999999145.716064
+  peptide_len: 999999580709.399658
+  acidic_group: 999999251191.379150
+  polar_group: 999998476171.898560
+  isoelectric_point: 999529000944.006226
+  charge: 999529000944.006226
+  boman: 998079014885.851196
+
+Integrated-SelectFromModel (L1-LR selector) + LR - Top 10 Features:
+  peptide_len: 36.073676
+  hydrophobic_janin: 31.707650
+  acidic_group: 24.863915
+  X8_SY: 22.407796
+  isoelectric_point: 20.485034
+  X8_DK: 18.199896
+  X8_FQ: 17.295960
+  X4_H: 17.268839
+  X8_IV: 16.232327
+  X8_EW: 16.219719
+
+Integrated-SelectFromModel (L1-LR selector) + SVM - Top 10 Features:
+  peptide_len: 36.073676
+  hydrophobic_janin: 31.707650
+  acidic_group: 24.863915
+  X8_SY: 22.407796
+  isoelectric_point: 20.485034
+  X8_DK: 18.199896
+  X8_FQ: 17.295960
+  X4_H: 17.268839
+  X8_IV: 16.232327
+  X8_EW: 16.219719
+
+Integrated-SelectFromModel (L1-LR selector) + KNN - Top 10 Features:
+  peptide_len: 36.073676
+  hydrophobic_janin: 31.707650
+  acidic_group: 24.863915
+  X8_SY: 22.407796
+  isoelectric_point: 20.485034
+  X8_DK: 18.199896
+  X8_FQ: 17.295960
+  X4_H: 17.268839
+  X8_IV: 16.232327
+  X8_EW: 16.219719
+
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes - Top 10 Features:
+  peptide_len: 36.073676
+  hydrophobic_janin: 31.707650
+  acidic_group: 24.863915
+  X8_SY: 22.407796
+  isoelectric_point: 20.485034
+  X8_DK: 18.199896
+  X8_FQ: 17.295960
+  X4_H: 17.268839
+  X8_IV: 16.232327
+  X8_EW: 16.219719
+
+Integrated-SelectFromModel (RF selector) + RF - Top 10 Features:
+  hydrophobic_janin: 2.792761
+  hydrophobic_eisenberg: 2.666779
+  hydrophobic_kyte-doolittle: 2.587399
+  boman: 2.245212
+  hydrophobic_engleman: 2.222929
+  charge: 2.218744
+  non-polar_group: 2.184652
+  isoelectric_point: 2.033282
+  cruciani_prp1: 2.005206
+  cruciani_prp3: 2.002335
+
+Integrated-SelectFromModel (RF selector) + LR - Top 10 Features:
+  hydrophobic_janin: 2.792761
+  hydrophobic_eisenberg: 2.666779
+  hydrophobic_kyte-doolittle: 2.587399
+  boman: 2.245212
+  hydrophobic_engleman: 2.222929
+  charge: 2.218744
+  non-polar_group: 2.184652
+  isoelectric_point: 2.033282
+  cruciani_prp1: 2.005206
+  cruciani_prp3: 2.002335
+
+Integrated-SelectFromModel (RF selector) + KNN - Top 10 Features:
+  hydrophobic_janin: 2.792761
+  hydrophobic_eisenberg: 2.666779
+  hydrophobic_kyte-doolittle: 2.587399
+  boman: 2.245212
+  hydrophobic_engleman: 2.222929
+  charge: 2.218744
+  non-polar_group: 2.184652
+  isoelectric_point: 2.033282
+  cruciani_prp1: 2.005206
+  cruciani_prp3: 2.002335
+
+Integrated-RFECV (L1-LR) + LR - Top 10 Features:
+  isoelectric_point: 98.830199
+  peptide_len: 98.794282
+  X8_SY: 98.660168
+  X8_DK: 98.576275
+  X8_EW: 98.532139
+  X8_FQ: 98.531504
+  X8_QW: 98.512850
+  X4_H: 98.507897
+  X8_IC: 98.426426
+  X8_NG: 98.413554
+
+Integrated-RFECV (L1-LR) + KNN - Top 10 Features:
+  isoelectric_point: 98.830199
+  peptide_len: 98.794282
+  X8_SY: 98.660168
+  X8_DK: 98.576275
+  X8_EW: 98.532139
+  X8_FQ: 98.531504
+  X8_QW: 98.512850
+  X4_H: 98.507897
+  X8_IC: 98.426426
+  X8_NG: 98.413554
+
+Integrated-RFECV (L1-LR) + Naive Bayes - Top 10 Features:
+  isoelectric_point: 98.830199
+  peptide_len: 98.794282
+  X8_SY: 98.660168
+  X8_DK: 98.576275
+  X8_EW: 98.532139
+  X8_FQ: 98.531504
+  X8_QW: 98.512850
+  X4_H: 98.507897
+  X8_IC: 98.426426
+  X8_NG: 98.413554
+
+Detailed results saved to: feature_selection_results_peptide_baza_formatted.csv_20250825_072906.txt
