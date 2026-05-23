@@ -1,8 +1,20 @@
-.vscode
-.venv
+# IDE / editor
+.vscode/
 
-.__pycache__/
-*.pyc
+# Python virtualenv and bytecode
+.venv/
+__pycache__/
+*.py[cod]
 
+# Pipeline cache (auto-regenerated; see CLAUDE.md)
 cache/
 *.parquet
+
+# Claude / plugin local state
+CLAUDE.md
+.remember/
+ruvector.db
+
+# OS noise
+Thumbs.db
+.DS_Store
