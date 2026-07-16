@@ -1,0 +1,19 @@
+Difficult-coupling prediction report - Prediction.xlsm / 'Difficulty (Sheet)'
+Generated: 2026-07-16 06:48:45
+Source: data/raw/peptide_baza.csv  (synthesis_flag = FALSE)
+
+Sequences analysed: 232   (4 demo peptides removed; not counted)
+
+Category rule: any red cell -> RED (even if green cells also present);
+               else any green cell -> GREEN; else NONE.
+
+  RED   (>=1 red cell)     : 175  ( 75.4%)
+  GREEN (green, no red)    :  22  (  9.5%)
+  NONE  (no coloured cells):  35  ( 15.1%)
+  ----------------------------------------
+  TOTAL                    : 232
+
+Of the 175 RED sequences, 37 also contain green cells
+(counted as RED per the rule above); 138 are red-only.
+
+Per-sequence detail: difficulty_report_20260716-064845.csv
