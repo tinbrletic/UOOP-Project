@@ -1,0 +1,32 @@
+Excel / Krchnak difficult-coupling predictor - both classes
+Generated: 2026-07-16 13:06:57
+Peptide Companion (M. Lebl); Krchnak et al., Int. J. Peptide Protein Res. 42, 450 (1993)
+Source workbook: Prediction_all_peptides.xlsm
+Peptides scored: 1771  (1539 TRUE / 232 FALSE)
+
+Higher coefficient = more aggregation = harder coupling.
+
+== max_coeff ==
+  FALSE: mean +1.2994  sd 0.1408  min +0.8800  max +1.6600
+  TRUE : mean +1.2204  sd 0.1258  min +0.8800  max +1.6200
+
+== mean_coeff ==
+  FALSE: mean +1.0462  sd 0.0950  min +0.7307  max +1.3540
+  TRUE : mean +0.9883  sd 0.0765  min +0.6820  max +1.2333
+
+== red_cells ==
+  FALSE: mean +3.2845  sd 3.1012  min +0.0000  max +11.0000
+  TRUE : mean +1.5010  sd 1.9568  min +0.0000  max +11.0000
+
+== Discrimination (positive = FALSE / will fail) ==
+  AUC-ROC, max_coeff   : 0.663   (0.500 = chance)
+  AUC-ROC, mean_coeff  : 0.681
+  AUC-ROC, red_cells   : 0.673   (the tool's own verdict)
+  AUC-ROC, length only : 0.639   (confound)
+
+== Length control (15-mer stratum) ==
+  n=1036 (202 FALSE / 834 TRUE)
+  AUC-ROC, max_coeff   : 0.644
+  AUC-ROC, red_cells   : 0.658
+
+Per-peptide detail: excel_difficulty_report_20260716-130657.csv
