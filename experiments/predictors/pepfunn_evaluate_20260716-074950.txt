@@ -1,0 +1,45 @@
+PepFuNN as a synthesis-outcome predictor - both classes
+Generated: 2026-07-16 07:49:50
+PepFuNN 1.0.0 (novonordisk-research/pepfunn), module pepfunn.sequence
+Source: data\raw\peptide_baza.csv
+Peptides: 1771  (1539 TRUE / 232 FALSE, 13.1% FALSE)
+
+== Synthesis rules failed: TRUE vs FALSE ==
+  rules   TRUE            FALSE
+    0      173 ( 11.2%)      8 (  3.4%)
+    1      674 ( 43.8%)    106 ( 45.7%)
+    2      619 ( 40.2%)    108 ( 46.6%)
+    3       70 (  4.5%)     10 (  4.3%)
+    4        3 (  0.2%)      0 (  0.0%)
+
+  mean rules failed: TRUE 1.387  |  FALSE 1.517
+
+== Discard rate (PepFuNN criterion: syn_failed > 1) ==
+  TRUE  (synthesis succeeded):  692/1539 discarded (45.0%)  <- false alarms
+  FALSE (synthesis failed)   :  118/232 discarded (50.9%)  <- caught
+  difference: +5.9 pp
+
+== Confusion matrix (positive = FALSE / will fail) ==
+                  predicted discard   predicted keep
+  actual FALSE             118                114
+  actual TRUE              692                847
+
+== Metrics ==
+  sensitivity (recall on FALSE): 0.509
+  specificity (on TRUE)        : 0.550
+  precision (PPV)              : 0.146   (base rate 0.131)
+  accuracy                     : 0.545
+  balanced accuracy            : 0.529   (0.500 = chance)
+  MCC                          : +0.040   (0.000 = chance)
+  AUC-ROC, syn_failed as score : 0.545   (0.500 = chance)
+  AUC-ROC, sol_failed as score : 0.435
+
+== Per-rule fire rate: TRUE vs FALSE ==
+  rule   TRUE     FALSE    diff    description
+     6    0.1%     0.4%    +0.3pp  3+ consecutive prolines [P]{3,}
+     7    5.7%     6.0%    +0.4pp  motif DG or DP present
+     8    7.5%     3.4%    -4.0pp  starts with N or Q
+     9   71.9%    84.5%   +12.6pp  run of >=5 residues with no charged residue
+    10   53.5%    57.3%    +3.9pp  oxidation-sensitive residue (M/C/W)
+
+Per-peptide detail: pepfunn_evaluate_20260716-074950.csv
