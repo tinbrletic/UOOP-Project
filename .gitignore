@@ -15,9 +15,15 @@ CLAUDE.md
 .remember/
 ruvector.db
 
-# Third-party predictor clones (re-clone, don't vendor)
+# Third-party predictor clones (re-clone, don't vendor) - setup steps live in the
+# docstring of the matching experiments/predictors/*_test.py
 #   git clone https://github.com/novonordisk-research/pepfunn.git experiments/predictors/pepfunn
+#   git clone https://github.com/learningmatter-mit/peptimizer.git experiments/predictors/peptimizer
 experiments/predictors/pepfunn/
+experiments/predictors/peptimizer/
+
+# Per-predictor virtualenvs (peptimizer needs its own Python 3.10 + TF 2.10 env)
+.venv-*/
 
 # OS noise
 Thumbs.db

@@ -1,0 +1,37 @@
+peptimizer (fast-flow synthesis) - pretrained 'minimal' model
+Generated: 2026-07-16 08:43:45
+learningmatter-mit/peptimizer, model/model_synthesis/synthesis_minimal.hdf5
+Mohapatra et al., ACS Cent. Sci. 2020, doi:10.1021/acscentsci.0c00979
+Source: data/raw/peptide_baza.csv
+
+Label: first_diff = deprotection peak height - width.
+MORE NEGATIVE = more aggregation = harder coupling.
+Per peptide: min = worst coupling step, mean = average over steps.
+
+FALSE peptides (synthesis failed)   : n=232, 3212 coupling steps
+  min_first_diff : mean -0.3774  sd 0.1922  min -0.6215  max +0.0047
+  mean_first_diff: mean -0.1188  sd 0.1092  min -0.3691  max +0.1352
+
+TRUE peptides (synthesis succeeded) : n=1539, 19796 coupling steps
+  min_first_diff : mean -0.2335  sd 0.1611  min -0.6677  max +0.0244
+  mean_first_diff: mean -0.0548  sd 0.0769  min -0.3491  max +0.1514
+
+== Discrimination (positive = FALSE / will fail) ==
+  AUC-ROC, -min_first_diff      : 0.714   (0.500 = chance)
+  AUC-ROC, -mean_first_diff     : 0.678
+  AUC-ROC, n_steps_below_-0.4   : 0.669
+
+== Length confound control ==
+min over more coupling steps is lower by construction, and the FALSE class
+skews long, so length alone carries signal. Re-checked in the 15-mer stratum,
+where every peptide has the same number of steps:
+  AUC-ROC, length alone         : 0.639
+  15-mers only: n=1036 (202 FALSE / 834 TRUE)
+    AUC-ROC, -min_first_diff    : 0.707   <- survives the control
+    AUC-ROC, -mean_first_diff   : 0.658
+
+CAVEAT: the model was trained on automated fast-flow synthesis (AFPS) at MIT;
+this dataset is batch Fmoc SPPS from Gutman et al. 2022. Different instrument
+and conditions, so transfer is an assumption, not a given.
+
+Per-peptide detail: peptimizer_report_20260716-084345.csv
