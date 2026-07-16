@@ -1,0 +1,37 @@
+PepFuNN empirical rules - FALSE-synthesis peptides
+Generated: 2026-07-16 07:29:39
+PepFuNN 1.0.0 (novonordisk-research/pepfunn), module pepfunn.sequence
+Source: data\raw\peptide_baza.csv  (synthesis_flag = FALSE, n=232)
+
+== Synthesis rules failed per peptide (0-5) ==
+  0 rule(s):   8  (  3.4%)
+  1 rule(s): 106  ( 45.7%)
+  2 rule(s): 108  ( 46.6%)
+  3 rule(s):  10  (  4.3%)
+  PepFuNN's own reject criterion (>1 rule failed): 118/232 (50.9%) would be discarded
+
+== How often each synthesis rule fires ==
+  rule  6:   1 (  0.4%)  3+ consecutive prolines  [P]{3,}   (docstring says '2 prolines')
+  rule  7:  14 (  6.0%)  motif DG or DP present   D[GP]
+  rule  8:   8 (  3.4%)  starts with N or Q       ^[NQ]     (docstring says 'ends with')
+  rule  9: 196 ( 84.5%)  a run of >=5 residues with no charged residue (H,R,K,D,E)
+  rule 10: 133 ( 57.3%)  oxidation-sensitive residue present (M, C or W)
+
+== Solubility rules failed per peptide (0-5) ==
+  1 rule(s):  13  (  5.6%)
+  2 rule(s):  89  ( 38.4%)
+  3 rule(s):  99  ( 42.7%)
+  4 rule(s):  26  ( 11.2%)
+  5 rule(s):   5  (  2.2%)
+
+== Cross-tab vs Excel predictor (difficulty_report_20260716-064845.csv) ==
+   Excel category   PepFuNN discard(>1)   PepFuNN keep(<=1)   total
+   RED                          89                  86     175
+   GREEN                        12                  10      22
+   NONE                         17                  18      35
+   Rough agreement (RED~discard, GREEN/NONE~keep): 117/232 (50.4%)
+
+NOTE: all inputs are known synthesis failures - there is no negative
+control here. Compare against the TRUE peptides before drawing conclusions.
+
+Per-sequence detail: pepfunn_report_20260716-072939.csv

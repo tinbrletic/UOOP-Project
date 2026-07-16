@@ -15,6 +15,10 @@ CLAUDE.md
 .remember/
 ruvector.db
 
+# Third-party predictor clones (re-clone, don't vendor)
+#   git clone https://github.com/novonordisk-research/pepfunn.git experiments/predictors/pepfunn
+experiments/predictors/pepfunn/
+
 # OS noise
 Thumbs.db
 .DS_Store
