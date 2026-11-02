@@ -11,7 +11,7 @@ Usage:
 
 Exit codes: 0 = scanned, 2 = could not find sequences.
 
-Rule sources are listed in ../references/liability-rules.md. This reports MECHANISTIC
+Rule sources are listed in ../references/factor-catalogue.md. This reports MECHANISTIC
 RISK FLAGS, not a calibrated probability of failure. See "Honest limits" in SKILL.md.
 """
 
@@ -59,38 +59,35 @@ ASPARTIMIDE = OrderedDict([
 SEV_ORDER = {'INFO': 0, 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4}
 
 # Two categories, because they answer different questions.
-#   ASSEMBLY - predicts whether the chain will assemble cleanly. Empirically enriches
-#              for failure on the Gutman 2022 dataset (n=1771, 13.1% base failure rate).
-#   PROCESS  - real chemistry needing a specific mitigation, but NOT predictive of crude
-#              purity on that dataset. Treat as a protocol checklist, not a risk score.
+#   ASSEMBLY - bears on whether the chain assembles cleanly (solvation/aggregation and
+#              steric access). Mechanistically the dominant cause of incomplete coupling.
+#   PROCESS  - a discrete side reaction with a known mitigation. Whether it shows up in a
+#              given outcome measure depends entirely on what that measure detects.
 #
-# 'lift' = P(failure | rule fires) / P(failure | rule does not fire), measured on
-# data/raw/peptide_baza.csv. Lift ~1.0 means no discriminative power. Below 1.0 means
-# the rule fires MORE often on successful syntheses - see the Arg note in SKILL.md.
-RULE_META = {
-    'agg.hydrophobic_window':  ('ASSEMBLY', 3.19),
-    'agg.h_stretch':           ('ASSEMBLY', 2.16),
-    'agg.beta_branched_run':   ('ASSEMBLY', 1.93),
-    # Length is reported but NOT trusted: within the homogeneous length-15 cohort that
-    # holds 87% of this dataset's failures, length AUC is 0.500 by construction, and the
-    # >=20 rule fires more often on successes. See "Confounds" in SKILL.md.
-    'agg.length':              ('ASSEMBLY', 0.52),
-    'agg.pseudoproline_site':  ('ASSEMBLY', None),
-    'side.diketopiperazine':   ('PROCESS', 1.46),
-    'side.aspartimide':        ('PROCESS', 1.37),
-    'side.pyroglutamate':      ('PROCESS', 1.16),
-    'side.oxidation':          ('PROCESS', 1.15),
-    'side.racemization':       ('PROCESS', 0.91),
-    'side.arg_lactam':         ('PROCESS', 0.58),
-    'side.disulfide':          ('PROCESS', None),
-    'stability.deamidation':   ('PROCESS', 0.39),
-    'seq.nonstandard':         ('DATA', None),
-    'seq.empty':               ('DATA', None),
+# NO LIFT VALUES ARE HARDCODED, deliberately. Predictive power is a property of a dataset
+# and its outcome definition, not of the chemistry. Derive it for your own data with
+# --calibrate; see "Calibration" in SKILL.md.
+RULE_CATEGORY = {
+    'agg.hydrophobic_window': 'ASSEMBLY',
+    'agg.h_stretch':          'ASSEMBLY',
+    'agg.beta_branched_run':  'ASSEMBLY',
+    'agg.length':             'ASSEMBLY',
+    'agg.pseudoproline_site': 'ASSEMBLY',
+    'side.diketopiperazine':  'PROCESS',
+    'side.aspartimide':       'PROCESS',
+    'side.pyroglutamate':     'PROCESS',
+    'side.oxidation':         'PROCESS',
+    'side.racemization':      'PROCESS',
+    'side.arg_lactam':        'PROCESS',
+    'side.disulfide':         'PROCESS',
+    'stability.deamidation':  'PROCESS',
+    'seq.nonstandard':        'DATA',
+    'seq.empty':              'DATA',
 }
 
 
 def rule_category(rule):
-    return RULE_META.get(rule, ('PROCESS', None))[0]
+    return RULE_CATEGORY.get(rule, 'PROCESS')
 
 
 class Finding:
@@ -258,10 +255,10 @@ def check_side_reactions(seq):
     if len(rpos) >= 2:
         f.append(Finding('side.arg_lactam', 'INFO',
                          '%d Arg residues at %s. delta-lactam formation during activation can '
-                         'give des-Arg deletions; recoupling is commonly required. NOTE: on an '
-                         'MS-abundance label this rule fires MORE often on SUCCESSFUL '
-                         'syntheses (lift 0.58) - basic residues raise ESI response. Do not '
-                         'use Arg content as a difficulty signal.'
+                         'give des-Arg deletions; recoupling is commonly required. CAUTION: if '
+                         'the outcome measure derives from positive-mode MS, Arg content '
+                         'inflates apparent purity (basic residues ionise well), so this rule '
+                         'can correlate with SUCCESS. Calibrate before using it as a signal.'
                          % (len(rpos), ', '.join(map(str, rpos))), rpos))
     elif rpos:
         f.append(Finding('side.arg_lactam', 'INFO',
@@ -279,8 +276,8 @@ def check_side_reactions(seq):
     if ox:
         f.append(Finding('side.oxidation', 'INFO',
                          'Oxidation-sensitive residues (%s). Scavenger choice at cleavage '
-                         'matters. Near-universal (fires on ~54%% of typical sets) and not '
-                         'discriminative - a protocol note, not a risk signal.'
+                         'matters. Fires on a large fraction of typical sets, so it is a '
+                         'protocol note rather than a discriminating signal.'
                          % ', '.join('%s%d' % (a, p) for p, a in ox)))
 
     # Asn-Gly: deamidation. General peptide-stability knowledge, not from the SPPS sources.
@@ -316,6 +313,131 @@ def baseline_features(seq):
         'kd_mean': round(sum(kd) / len(kd), 4),
         'h_stretch': h_run,
     }
+
+
+# ---------------------------------------------------------------- calibration
+
+def auc_rank(scores, labels):
+    """Rank-based AUC for predicting label==1. Ties get average ranks."""
+    pairs = sorted(zip(scores, labels))
+    n = len(pairs)
+    rk = [0.0] * n
+    i = 0
+    while i < n:
+        j = i
+        while j < n and pairs[j][0] == pairs[i][0]:
+            j += 1
+        avg = (i + j + 1) / 2.0
+        for k in range(i, j):
+            rk[k] = avg
+        i = j
+    pos = sum(1 for _, l in pairs if l == 1)
+    neg = n - pos
+    if pos < 3 or neg < 3:
+        return None
+    s = sum(rk[k] for k in range(n) if pairs[k][1] == 1)
+    return (s - pos * (pos + 1) / 2.0) / (pos * neg)
+
+
+CONT_FEATURES = ('length', 'janin_mean', 'kd_mean', 'h_stretch', 'max_kd_window')
+
+
+def _cont(seq):
+    ft = baseline_features(seq)
+    w = window_means(seq, KD, 5)
+    ft['max_kd_window'] = round(max(v for _, v in w), 4) if w else 0.0
+    return ft
+
+
+def calibrate(pairs, label_name, failure_value):
+    """pairs: list of (sequence, raw_label). Derive rule lift and feature AUC on THIS data."""
+    data = []
+    for seq, raw in pairs:
+        seq = (seq or '').strip().upper()
+        if not seq:
+            continue
+        fail = 1 if str(raw).strip() == str(failure_value) else 0
+        _, findings = scan_sequence(seq)
+        data.append((seq, fail, {f.rule for f in findings}, _cont(seq)))
+
+    n = len(data)
+    nfail = sum(d[1] for d in data)
+    print('=' * 74)
+    print('CALIBRATION ON THIS DATASET')
+    print('=' * 74)
+    print('n = %d   outcome column = %r   value counted as failure = %r'
+          % (n, label_name, failure_value))
+    if not nfail or nfail == n:
+        print('\nAll rows have the same outcome. Cannot calibrate.')
+        print('Check --failure-value against the actual column values.')
+        return
+    print('failures = %d (%.1f%%)   successes = %d' % (nfail, 100.0 * nfail / n, n - nfail))
+    print()
+    print('Lift = P(failure | rule fires) / P(failure | it does not). 1.0 = no signal.')
+    print('Below 1.0 means the rule fires MORE often on successes - investigate why.')
+    print()
+    print('%-26s %5s %9s %9s %7s' % ('RULE', 'fires', 'fail|fire', 'fail|not', 'lift'))
+    print('-' * 62)
+    rows = []
+    for rule in sorted(RULE_CATEGORY):
+        fires = [d for d in data if rule in d[2]]
+        rest = [d for d in data if rule not in d[2]]
+        if len(fires) < 10 or not rest:
+            continue
+        a = sum(d[1] for d in fires) / len(fires)
+        b = sum(d[1] for d in rest) / len(rest)
+        rows.append((a / b if b else float('inf'), rule, len(fires), a, b))
+    for lift, rule, nf, a, b in sorted(rows, reverse=True):
+        print('%-26s %5d %9.3f %9.3f %7.2f' % (rule, nf, a, b, lift))
+
+    labels = [d[1] for d in data]
+    print()
+    print('%-16s %9s' % ('FEATURE', 'AUC(fail)'))
+    print('-' * 27)
+    for f in CONT_FEATURES:
+        a = auc_rank([d[3].get(f, 0) for d in data], labels)
+        print('%-16s %9s' % (f, '%.4f' % a if a is not None else 'n/a'))
+
+    # --- cohort-confound check -------------------------------------------------
+    by_len = {}
+    for seq, fail, _, _ in data:
+        c = by_len.setdefault(len(seq), [0, 0])
+        c[0] += 1
+        c[1] += fail
+    worst = max(by_len.items(), key=lambda kv: kv[1][1])
+    L, (ln, lf) = worst
+    share_fail = lf / nfail
+    share_rows = ln / n
+    print()
+    print('COHORT CHECK')
+    print('-' * 27)
+    print('%-16s %6s %6s %9s' % ('length', 'n', 'fail', 'fail rate'))
+    for k in sorted(by_len):
+        c = by_len[k]
+        print('%-16d %6d %6d %9.3f' % (k, c[0], c[1], c[1] / c[0]))
+    if share_fail >= 0.40 and share_rows >= 0.20:
+        print()
+        print('WARNING: length %d holds %.0f%% of all failures and %.0f%% of all rows.'
+              % (L, 100 * share_fail, 100 * share_rows))
+        print('Any feature correlated with length may be acting as a cohort indicator')
+        print('rather than a chemical signal. Re-checking within that stratum only:')
+        sub = [d for d in data if len(d[0]) == L]
+        sl = [d[1] for d in sub]
+        print()
+        print('  %-16s %9s %9s' % ('FEATURE', 'AUC all', 'AUC in-stratum'))
+        print('  ' + '-' * 38)
+        for f in CONT_FEATURES:
+            a_all = auc_rank([d[3].get(f, 0) for d in data], labels)
+            a_sub = auc_rank([d[3].get(f, 0) for d in sub], sl)
+            print('  %-16s %9s %9s'
+                  % (f, '%.4f' % a_all if a_all is not None else 'n/a',
+                     '%.4f' % a_sub if a_sub is not None else 'n/a'))
+        print()
+        print('  A feature whose AUC collapses in-stratum was riding the cohort.')
+        print('  A feature that holds up is measuring something real.')
+    else:
+        print()
+        print('No single length dominates the failures. No cohort warning.')
 
 
 # ---------------------------------------------------------------- input
@@ -434,6 +556,64 @@ def load_sequences(path, column=None, sep=None):
     return seqs, header[idx]
 
 
+def load_pairs(path, seq_column, label_column, sep=None):
+    """Return [(sequence, raw_label)] from a delimited file or spreadsheet."""
+    ext = os.path.splitext(path)[1].lower()
+
+    if ext in ('.xlsx', '.xlsm', '.xltx'):
+        from openpyxl import load_workbook
+        wb = load_workbook(path, read_only=True, data_only=True)
+        out = []
+        for ws in wb.worksheets:
+            rows = list(ws.iter_rows(values_only=True))
+            for hdr_i, hdr in enumerate(rows[:5]):
+                cells = [str(c).strip() if c is not None else '' for c in hdr]
+                if label_column in cells and (seq_column is None or seq_column in cells):
+                    li = cells.index(label_column)
+                    si = cells.index(seq_column) if seq_column else next(
+                        (i for i, c in enumerate(cells) if c.lower() in SEQ_COL_HINTS), 0)
+                    for r in rows[hdr_i + 1:]:
+                        if si < len(r) and li < len(r) and r[si] and r[li] is not None:
+                            v = str(r[si]).strip()
+                            if _is_sequence(v):
+                                out.append((v, r[li]))
+                    wb.close()
+                    return out
+        wb.close()
+        return []
+
+    with open(path, 'r', encoding='utf-8', errors='replace', newline='') as fh:
+        sample = fh.read(8192)
+        fh.seek(0)
+        if sep is None:
+            try:
+                sep = _csv.Sniffer().sniff(sample, delimiters=';,\t|').delimiter
+            except Exception:
+                sep = ';' if sample.count(';') > sample.count(',') else ','
+        rows = list(_csv.reader(fh, delimiter=sep))
+    if not rows:
+        return []
+    header = [h.strip().strip('"') for h in rows[0]]
+    if label_column not in header:
+        sys.exit('Label column %r not found. Available: %s' % (label_column, header))
+    li = header.index(label_column)
+    if seq_column:
+        if seq_column not in header:
+            sys.exit('Sequence column %r not found. Available: %s' % (seq_column, header))
+        si = header.index(seq_column)
+    else:
+        si = next((header.index(h) for hint in SEQ_COL_HINTS for h in header
+                   if h.lower() == hint), None)
+        if si is None:
+            scores = sorted(((_looks_like_sequences([r[i] for r in rows[1:400] if i < len(r)]), i)
+                             for i in range(len(header))), reverse=True)
+            if not scores or scores[0][0] < 0.3:
+                return []
+            si = scores[0][1]
+    return [(r[si].strip().strip('"'), r[li].strip().strip('"'))
+            for r in rows[1:] if si < len(r) and li < len(r) and r[si].strip()]
+
+
 # ---------------------------------------------------------------- report
 
 def main():
@@ -447,10 +627,30 @@ def main():
     ap.add_argument('--min-severity', default='MEDIUM',
                     choices=tuple(SEV_ORDER), help='floor for per-sequence listing')
     ap.add_argument('--summary-only', action='store_true')
+    ap.add_argument('--label-column',
+                    help='outcome column; given, the script calibrates rules on THIS dataset '
+                         'instead of reporting borrowed numbers')
+    ap.add_argument('--failure-value',
+                    help='value in --label-column that means "failed/problematic". '
+                         'Default: the minority value, reported explicitly.')
     args = ap.parse_args()
 
     if not os.path.exists(args.path):
         sys.exit('No such file: %s' % args.path)
+
+    if args.label_column:
+        pairs = load_pairs(args.path, args.column, args.label_column, args.sep)
+        if not pairs:
+            print('Could not read sequence+label pairs from %s' % args.path, file=sys.stderr)
+            return 2
+        fv = args.failure_value
+        if fv is None:
+            counts = Counter(str(l).strip() for _, l in pairs)
+            fv = min(counts, key=counts.get)
+            print('--failure-value not given; using minority value %r %s\n'
+                  % (fv, dict(counts)))
+        calibrate(pairs, args.label_column, fv)
+        return 0
 
     seqs, where = load_sequences(args.path, args.column, args.sep)
     if not seqs:
@@ -511,17 +711,15 @@ def main():
             print('  %-9s %6d' % (sev, sev_counts[sev]))
     print()
     for cat, title in (('DATA', 'DATA INTEGRITY'),
-                       ('ASSEMBLY', 'CHAIN-ASSEMBLY DIFFICULTY  (predicts crude purity)'),
-                       ('PROCESS', 'PROCESS LIABILITIES  (need mitigation; not predictive)')):
+                       ('ASSEMBLY', 'CHAIN-ASSEMBLY DIFFICULTY  (solvation / steric access)'),
+                       ('PROCESS', 'PROCESS LIABILITIES  (discrete, each with a mitigation)')):
         hits = [(r, c) for r, c in rule_counts.most_common() if rule_category(r) == cat]
         if not hits:
             continue
         print('%s' % title)
         for rule, cnt in hits:
             pct = 100.0 * cnt / max(1, len(results))
-            lift = RULE_META.get(rule, (None, None))[1]
-            ltxt = ('lift %.2f' % lift) if lift else '--'
-            print('  %-26s %6d  (%5.1f%%)  %s' % (rule, cnt, pct, ltxt))
+            print('  %-26s %6d  (%5.1f%% of sequences)' % (rule, cnt, pct))
         print()
     print('Sequences at or above %s: %d of %d (%.1f%%)'
           % (args.min_severity, len(flagged), len(results),
@@ -544,7 +742,7 @@ def main():
 
     print()
     print('Risk flags are mechanistic, not calibrated probabilities.')
-    print('Rule sources: ../references/liability-rules.md')
+    print('Rule sources: ../references/factor-catalogue.md')
     return 0
 
 
