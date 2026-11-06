@@ -39,9 +39,25 @@ JANIN = {
     'P': -0.3, 'S': -0.1, 'T': -0.2, 'W': 0.3, 'Y': -0.4, 'V': 0.6,
 }
 
-ALIPHATIC_H = set("ILMV")      # Gutman et al. 'h'
+ALIPHATIC_H = set("ILMV")      # the classic 'h' set: aliphatic-hydrophobic
 BETA_BRANCHED = set("IVT")     # slow coupling, steric
 PSEUDOPRO_PRECURSOR = set("STC")  # pseudoproline building blocks derive from Ser/Thr/Cys
+
+# Gly and Pro break beta-sheet: Pro cannot donate a backbone NH and is conformationally
+# restricted; Gly is flexible and entropically costly to order. A long stretch containing
+# NEITHER is free to form regular extended structure. This is why poly-Ala aggregates --
+# the canonical difficult sequence is decaalanine, which the ILMV run rule scores 0.
+# Ala's own beta-sheet propensity is LOW (Chou-Fasman P-beta 0.83); the driver is backbone
+# regularity with no disruptor and no steric relief, not side-chain hydrophobicity.
+SHEET_DISRUPTOR = set("GP")
+
+# Chou & Fasman 1978 beta-sheet propensity (P-beta). Used for a propensity-weighted window
+# that is independent of hydrophobicity, since the two dissociate (Ala, Thr, Gln).
+P_BETA = {
+    'V': 1.70, 'I': 1.60, 'Y': 1.47, 'C': 1.19, 'W': 1.37, 'F': 1.38, 'L': 1.30,
+    'T': 1.19, 'M': 1.05, 'A': 0.83, 'R': 0.93, 'G': 0.75, 'D': 0.54, 'K': 0.74,
+    'S': 0.75, 'H': 0.87, 'N': 0.89, 'Q': 1.10, 'P': 0.55, 'E': 0.37,
+}
 
 # Asp-Xaa aspartimide sensitivity (Gyros Protein Technologies, SPPS Tips For Success)
 ASPARTIMIDE = OrderedDict([
@@ -68,11 +84,18 @@ SEV_ORDER = {'INFO': 0, 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4}
 # and its outcome definition, not of the chemistry. Derive it for your own data with
 # --calibrate; see "Calibration" in SKILL.md.
 RULE_CATEGORY = {
-    'agg.hydrophobic_window': 'ASSEMBLY',
-    'agg.h_stretch':          'ASSEMBLY',
-    'agg.beta_branched_run':  'ASSEMBLY',
-    'agg.length':             'ASSEMBLY',
-    'agg.pseudoproline_site': 'ASSEMBLY',
+    'agg.hydrophobic_window':      'ASSEMBLY',
+    'agg.h_stretch':               'ASSEMBLY',
+    'agg.beta_branched_run':       'ASSEMBLY',
+    'agg.homopolymer_run':         'ASSEMBLY',
+    'agg.no_disruptor_window':     'ASSEMBLY',
+    'agg.sheet_propensity_window': 'ASSEMBLY',
+    'agg.anchor_zone':             'ASSEMBLY',
+    'agg.pseudoproline_site':      'ASSEMBLY',
+    # Length is about CUMULATIVE YIELD, not aggregation. Aggregation risk is reported in
+    # the literature as non-monotone in length (a window measured from the resin), so the
+    # two are deliberately separate rules; see agg.anchor_zone.
+    'agg.length':                  'YIELD',
     'side.diketopiperazine':  'PROCESS',
     'side.aspartimide':       'PROCESS',
     'side.pyroglutamate':     'PROCESS',
@@ -81,9 +104,24 @@ RULE_CATEGORY = {
     'side.arg_lactam':        'PROCESS',
     'side.disulfide':         'PROCESS',
     'stability.deamidation':  'PROCESS',
+    'stability.deamidation_cterm': 'PROCESS',
     'seq.nonstandard':        'DATA',
     'seq.empty':              'DATA',
 }
+
+# Sequences the literature names as known-difficult, with what makes each one hard.
+# Used by --selftest: when no labelled outcomes exist, the nearest available validity
+# check is whether the rules fire on cases a source already calls failures.
+SELFTEST = [
+    ('AAAAAAAAAA', 'decaalanine - the canonical difficult sequence; beta-structure and '
+                   'severe resin shrinkage, NMR line-broadening 8-10 residues from resin'),
+    ('VQAAIDYING', 'ACP(65-74) - the standard difficult-coupling benchmark'),
+    ('VQLLLLIDYING', 'contrived: long aliphatic run inside the collapse zone'),
+    ('HAEGTFTSDVSSYLEGQAAKEFIAWLVKGR', 'a 30-mer with a C-terminal hydrophobic stretch'),
+    ('QLLLLVDGKP', 'contrived: N-terminal Gln, Asp-Gly, C-terminal Pro, hydrophobic run'),
+    ('AGSGAGSGAK', 'benign control - Gly/Ser rich, should stay quiet'),
+    ('EEKKEEKKEEKK', 'benign control - charged, highly soluble, should stay quiet'),
+]
 
 
 def rule_category(rule):
@@ -119,6 +157,20 @@ def longest_run(seq, members):
                 best, best_start = cur, cur_start
         else:
             cur = 0
+    return best, best_start + 1
+
+
+def longest_homopolymer(seq):
+    """Return (length, start_index_1based) of the longest run of one identical residue."""
+    best = best_start = 0
+    i = 0
+    while i < len(seq):
+        j = i
+        while j < len(seq) and seq[j] == seq[i]:
+            j += 1
+        if j - i > best:
+            best, best_start = j - i, i
+        i = j
     return best, best_start + 1
 
 
@@ -190,7 +242,65 @@ def check_aggregation(seq):
                          'consider fragment condensation or ligation.' % n))
     elif n >= 20:
         f.append(Finding('agg.length', 'MEDIUM',
-                         'Length %d. Aggregation risk rises with chain length.' % n))
+                         'Length %d. Cumulative stepwise yield loss grows with length.' % n))
+
+    # --- backbone regularity: catches poly-Ala, which the ILMV run rule cannot see ----
+    homo, hpos = longest_homopolymer(seq)
+    if homo >= 5:
+        f.append(Finding('agg.homopolymer_run', 'CRITICAL' if homo >= 8 else 'HIGH',
+                         'Run of %d identical residues (%s) at position %d. Maximal backbone '
+                         'regularity with no disruption; homopolymer stretches of small '
+                         'residues aggregate even when not hydrophobic.'
+                         % (homo, seq[hpos - 1], hpos), [hpos]))
+
+    # Regularity alone is not enough: aggregation needs regular backbone AND poor
+    # solvation. A disruptor-free stretch of charged residues (e.g. EEKKEEKKEEKK) is
+    # highly soluble and does not aggregate, so gate on charge density.
+    dfree, dpos = longest_run(seq, STANDARD_AA - SHEET_DISRUPTOR)
+    if dfree >= 10:
+        stretch = seq[dpos - 1:dpos - 1 + dfree]
+        charged_frac = sum(1 for a in stretch if a in 'DEKR') / len(stretch)
+        if charged_frac < 0.40:
+            f.append(Finding('agg.no_disruptor_window', 'HIGH' if dfree >= 14 else 'MEDIUM',
+                             'Stretch of %d residues from position %d with no Gly or Pro and '
+                             'only %.0f%% charged. Neither beta-sheet disruptor is present and '
+                             'solvation is not assured, so the backbone is free to adopt '
+                             'regular extended structure.'
+                             % (dfree, dpos, 100 * charged_frac), [dpos]))
+
+    pw = window_means(seq, P_BETA, 6)
+    if pw:
+        pstart, pmax = max(pw, key=lambda t: t[1])
+        if pmax >= 1.30:
+            f.append(Finding('agg.sheet_propensity_window', 'MEDIUM',
+                             'High beta-sheet propensity over 6 residues (mean P-beta %.2f) at '
+                             'position %d: %s. Independent of hydrophobicity - the two '
+                             'dissociate for Ala, Thr and Gln.'
+                             % (pmax, pstart, seq[pstart - 1:pstart + 5]), [pstart]))
+
+    # --- anchored position: risk is reported as a WINDOW measured from the resin --------
+    # Houben-Weyl E22: "the critical region was the zone about 8-10 residues out from the
+    # resin"; "the synthesis will rarely collapse after 25 residues". Aggregation risk is
+    # NON-MONOTONE in length, so this is indexed from the C-terminal anchor, not global.
+    if n >= 8:
+        lo_i, hi_i = max(0, n - 25), n - 8   # residues 8..25 out from the C-terminal anchor
+        zone = seq[lo_i:hi_i]
+        if zone:
+            zh = sum(1 for a in zone if a in ALIPHATIC_H or a in BETA_BRANCHED)
+            frac = zh / len(zone)
+            zd = sum(1 for a in zone if a in SHEET_DISRUPTOR)
+            if frac >= 0.40 and zd == 0:
+                f.append(Finding('agg.anchor_zone', 'HIGH',
+                                 'Collapse zone (residues 8-%d from the C-terminal anchor, '
+                                 '"%s") is %.0f%% hydrophobic/beta-branched with no Gly or '
+                                 'Pro. This is the window the literature reports aggregation '
+                                 'onset in; position is measured from the resin, not globally.'
+                                 % (min(25, n), zone, 100 * frac), [lo_i + 1]))
+            elif frac >= 0.40:
+                f.append(Finding('agg.anchor_zone', 'MEDIUM',
+                                 'Collapse zone (residues 8-%d from the C-terminal anchor) is '
+                                 '%.0f%% hydrophobic/beta-branched.'
+                                 % (min(25, n), 100 * frac), [lo_i + 1]))
 
     # Rescue opportunity, not a liability.
     if run >= 3:
@@ -280,12 +390,22 @@ def check_side_reactions(seq):
                          'protocol note rather than a discriminating signal.'
                          % ', '.join('%s%d' % (a, p) for p, a in ox)))
 
-    # Asn-Gly: deamidation. General peptide-stability knowledge, not from the SPPS sources.
-    for m in re.finditer('NG', seq):
+    # Deamidation. Both a motif effect and a POSITIONAL effect: the same Gln has been
+    # reported to deamidate at 3 residues from the C-terminus and not at 3 from the
+    # N-terminus, so proximity to the C-terminus is a signal in its own right.
+    for m in re.finditer('N(?=[GS])', seq):
         f.append(Finding('stability.deamidation', 'LOW',
-                         'Asn-Gly at position %d. Deamidation hotspot - a storage/stability '
-                         'liability rather than an SPPS one.' % (m.start() + 1),
-                         [m.start() + 1]))
+                         'Asn-%s at position %d. Classic deamidation hotspot.'
+                         % (seq[m.start() + 1], m.start() + 1), [m.start() + 1]))
+    tail = [(i + 1, a) for i, a in enumerate(seq) if a in 'NQ' and n - i <= 3]
+    if tail:
+        f.append(Finding('stability.deamidation_cterm', 'MEDIUM',
+                         'Asn/Gln within 3 residues of the C-terminus (%s). Deamidation is '
+                         'position-dependent, not only motif-dependent: the same residue can '
+                         'deamidate near the C-terminus and not near the N-terminus. A '
+                         'C-terminal Asx-alpha-amide is especially susceptible.'
+                         % ', '.join('%s%d' % (a, p) for p, a in tail),
+                         [p for p, _ in tail]))
     return f
 
 
@@ -619,7 +739,7 @@ def load_pairs(path, seq_column, label_column, sep=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('path')
+    ap.add_argument('path', nargs='?')
     ap.add_argument('--column', help='sequence column name (else auto-detected)')
     ap.add_argument('--sep', help='delimiter for text files (else sniffed)')
     ap.add_argument('--format', choices=('text', 'json', 'csv'), default='text')
@@ -633,8 +753,33 @@ def main():
     ap.add_argument('--failure-value',
                     help='value in --label-column that means "failed/problematic". '
                          'Default: the minority value, reported explicitly.')
+    ap.add_argument('--selftest', action='store_true',
+                    help='run the rules against sequences the literature names as '
+                         'known-difficult, plus benign controls. Use when no labelled '
+                         'outcomes exist - it is the nearest available validity check.')
     args = ap.parse_args()
 
+    if args.selftest:
+        print('RULE SELF-TEST')
+        print('=' * 74)
+        print('Known-difficult sequences from the literature, and benign controls.')
+        print('A difficult case that draws nothing, or a control that lights up, is a '
+              'rule defect.\n')
+        for seq, why in SELFTEST:
+            _, findings = scan_sequence(seq)
+            worst = max((SEV_ORDER[x.severity] for x in findings), default=0)
+            inv = {v: k for k, v in SEV_ORDER.items()}
+            print('%-32s %-9s %s' % (seq, inv[worst], why))
+            for x in sorted(findings, key=lambda y: -SEV_ORDER[y.severity]):
+                if SEV_ORDER[x.severity] >= SEV_ORDER['MEDIUM']:
+                    print('    [%-8s] %s' % (x.severity, x.rule))
+            if not findings:
+                print('    (nothing)')
+            print()
+        return 0
+
+    if not args.path:
+        sys.exit('A file is required unless --selftest is given.')
     if not os.path.exists(args.path):
         sys.exit('No such file: %s' % args.path)
 
@@ -712,6 +857,7 @@ def main():
     print()
     for cat, title in (('DATA', 'DATA INTEGRITY'),
                        ('ASSEMBLY', 'CHAIN-ASSEMBLY DIFFICULTY  (solvation / steric access)'),
+                       ('YIELD', 'CUMULATIVE YIELD  (length; distinct from aggregation)'),
                        ('PROCESS', 'PROCESS LIABILITIES  (discrete, each with a mitigation)')):
         hits = [(r, c) for r, c in rule_counts.most_common() if rule_category(r) == cat]
         if not hits:
