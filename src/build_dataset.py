@@ -194,7 +194,7 @@ def build(convention, fractions, out_path):
         rec = {'id': i, 'peptide_seq': seq}
         rec.update(sf.all_features(seq, convention=convention, fractions=fractions))
         rec.update(physicochemical(seq))
-        rec['target_col'] = label
+        rec['targetcol'] = label
         records.append(rec)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -204,7 +204,7 @@ def build(convention, fractions, out_path):
         w.writeheader()
         w.writerows(records)
 
-    pos = sum(r['target_col'] for r in records)
+    pos = sum(r['targetcol'] for r in records)
     print('wrote %s' % out_path)
     print('  rows     : %d' % len(records))
     print('  columns  : %d' % len(cols))
