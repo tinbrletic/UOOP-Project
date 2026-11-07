@@ -8,6 +8,7 @@ Reference material and findings for the peptide synthesis-success prediction pro
 | [02-source-dataset-and-label.md](02-source-dataset-and-label.md) | Label definition, the published AUC ceiling, and **§5: the length-15 cohort confound** |
 | [03-dataset-audit-findings.md](03-dataset-audit-findings.md) | **Verified defects in this repo's data and pipeline.** Read before trusting any result in `results/` |
 | [04-houben-weyl-review.md](04-houben-weyl-review.md) | Review of the Houben-Weyl E22a–c reference volumes: 36 factors, and six internal contradictions in the source. **Machine-generated and only partially verified — read its provenance header before citing it** |
+| **[05-results.md](05-results.md)** | **The results narrative. Start here if you want the findings** — what was measured, what survived stratification, what the best model achieves, and what the label cannot see. Written to be lifted into a report |
 
 Primary chemistry sources are in this folder: `SPPS Tips For Success Handout.pdf` (practical
 heuristics) and `Marta de Zotti - materials/HOUBEN WEYL E22A-C.pdf` (the definitive reference;
