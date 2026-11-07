@@ -535,14 +535,50 @@ def calibrate(pairs, label_name, failure_value):
     for k in sorted(by_len):
         c = by_len[k]
         print('%-16d %6d %6d %9.3f' % (k, c[0], c[1], c[1] / c[0]))
-    if share_fail >= 0.40 and share_rows >= 0.20:
-        print()
+    # Two different things make length do structural work, and they need separate tests.
+    #   (a) ONE length value dominates both rows and failures -> a distinct sub-library.
+    #   (b) failure rate climbs MONOTONICALLY across lengths -> no single value dominates,
+    #       but length still carries most of the signal. A check written only for (a)
+    #       stays silent on a relationship running from 5% to 76%.
+    dominant = share_fail >= 0.40 and share_rows >= 0.20
+
+    # (b): split into length quartiles by row count and compare failure rates.
+    ordered = sorted(data, key=lambda d: len(d[0]))
+    q = max(1, len(ordered) // 4)
+    bands = [ordered[0:q], ordered[q:2 * q], ordered[2 * q:3 * q], ordered[3 * q:]]
+    bands = [b for b in bands if len(b) >= 10]
+    rates = [(len(b[0][0]), len(b[-1][0]), sum(d[1] for d in b) / len(b), len(b))
+             for b in bands]
+    gradient = False
+    if len(rates) >= 3:
+        lo = min(r[2] for r in rates)
+        hi = max(r[2] for r in rates)
+        gradient = hi >= 0.10 and (lo == 0.0 or hi / lo >= 2.5)
+
+    print()
+    if dominant:
         print('WARNING: length %d holds %.0f%% of all failures and %.0f%% of all rows.'
               % (L, 100 * share_fail, 100 * share_rows))
-        print('Any feature correlated with length may be acting as a cohort indicator')
-        print('rather than a chemical signal. Re-checking within that stratum only:')
-        sub = [d for d in data if len(d[0]) == L]
+        print('That is a distinct sub-library, not a chain-length effect.')
+    if gradient:
+        print('WARNING: failure rate varies strongly across length bands:')
+        for a, b, rate, cnt in rates:
+            print('    len %2d-%-2d  n=%-5d  fail rate %.3f' % (a, b, cnt, rate))
+        print('Length carries much of the signal even though no single value dominates.')
+
+    if dominant or gradient:
+        # Stratify on whichever structure fired: the dominant value, else the largest band.
+        if dominant:
+            sub = [d for d in data if len(d[0]) == L]
+            label = 'length == %d' % L
+        else:
+            sub = max(bands, key=len)
+            label = 'len %d-%d' % (len(sub[0][0]), len(sub[-1][0]))
         sl = [d[1] for d in sub]
+        print()
+        print('Any feature correlated with length may be acting as a cohort indicator')
+        print('rather than a chemical signal. Re-checking within %s (n=%d):'
+              % (label, len(sub)))
         print()
         print('  %-16s %9s %9s' % ('FEATURE', 'AUC all', 'AUC in-stratum'))
         print('  ' + '-' * 38)
@@ -556,8 +592,8 @@ def calibrate(pairs, label_name, failure_value):
         print('  A feature whose AUC collapses in-stratum was riding the cohort.')
         print('  A feature that holds up is measuring something real.')
     else:
-        print()
-        print('No single length dominates the failures. No cohort warning.')
+        print('No single length dominates the failures, and failure rate does not')
+        print('vary strongly across length bands. No cohort warning.')
 
 
 # ---------------------------------------------------------------- input
