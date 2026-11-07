@@ -238,8 +238,30 @@ python scripts/scan_peptides.py <file> --label-column <col> [--failure-value <v>
 
 This reports per-rule lift, per-feature AUC, and automatically runs the cohort check,
 re-computing AUC within a dominant stratum when it finds one. **Use these numbers for the
-dataset you ran them on and nowhere else.** A rule with lift near 1.0 is not refuted as
-chemistry — it may be invisible to that outcome measure.
+dataset you ran them on and nowhere else.**
+
+### Reading a weak result: untested, degenerate, or invisible — rarely refuted
+
+A lift near 1.0 is the least informative number in the output, because four different things
+produce it. The calibration output flags the first two for you; you have to reason about the
+other two.
+
+| Signal | What it means | What the output shows |
+|---|---|---|
+| **Untested** | Too few firing rows for any effect to appear. A rule firing on 3 of 1771 rows at a 13% base rate expects 0.4 failures — its lift is counting noise whatever the chemistry does. | `UNTESTED (exp. N failures)` |
+| **Degenerate** | The *feature definition* has no room to vary on this data. An anchored window measured 8–25 residues from a terminus is a few residues wide on a 15-mer and empty on a 9-mer. | `DEGENERATE (near-constant / N% zero)` |
+| **Invisible** | Real and common, but the outcome measure cannot see it — e.g. an MS1 purity label and a by-product that is isobaric with the target. | Nothing; you must reason from §2's outcome definition |
+| **Refuted** | The mechanism does not operate in this sequence space. | Only after excluding the three above |
+
+**Do not retune a threshold to make a rule fire on the dataset in front of you.** A threshold
+set from a mechanism — a hydrophobic run long enough to nucleate a β-sheet, say — is a claim
+about chemistry, not a hyperparameter. Fitting it to one library is the overfitting this
+skill exists to catch. Report the rule as untested on that data and leave it alone.
+
+**Distinguish a rule from the feature underneath it.** A thresholded rule and the continuous
+quantity it thresholds are different things and can disagree sharply: a longest-run *feature*
+can carry real signal across its whole range while the *rule* that fires at run ≥ 5 is
+untestable because almost nothing reaches 5. Report whichever you actually measured.
 
 ### When there are no labelled outcomes
 
