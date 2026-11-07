@@ -10,10 +10,10 @@ legacy scripts.
 
 | # | Finding | Severity | Status |
 |---|---|---|---|
-| 1 | Compositional feature columns mislabelled — 8 of 9 hold the wrong quantity | **Critical** | **OPEN** |
-| 2 | Credentials committed in plaintext | **High** | **OPEN** |
-| 3 | No run-length / positional features despite source paper using them | **High** | **OPEN** |
-| 4 | Generation script does not reproduce the committed CSV (Cornette) | Medium | **OPEN** |
+| 1 | Compositional feature columns mislabelled — 8 of 9 hold the wrong quantity | **Critical** | **FIXED** in `build_dataset.py` |
+| 2 | Credentials committed in plaintext | **High** | **PARTIAL — rotate the password** |
+| 3 | No run-length / positional features despite source paper using them | **High** | **FIXED** in `sequence_features.py` |
+| 4 | Generation script does not reproduce the committed CSV | Medium | **FIXED** (reason corrected — see below) |
 | 5 | Near-duplicate sequences not checked before splitting | Medium | **OPEN** |
 | 6 | `peptide_baza_full.csv` has a corrupted, double-quoted header | Low | **OPEN** |
 | 7 | SMOTE applied before splitting, persisted to disk | Critical | **LEGACY** |
@@ -23,7 +23,12 @@ legacy scripts.
 
 ---
 
-## Finding 1 — Compositional columns are mislabelled *(Critical, OPEN)*
+## Finding 1 — Compositional columns are mislabelled *(Critical, FIXED)*
+
+> **Fixed** by `src/build_dataset.py`, which names every column for what it contains
+> (`n_paper_h`, `n_biochem_small`, …). The mis-mapping below is reproduced deliberately by
+> `--legacy-check` as a regression test. The historical CSVs under `data/` still carry the
+> fault and should not be used.
 
 `src/ingest_excel_to_db.py`
 
@@ -94,7 +99,12 @@ Also fix the stale comment `#3 Aromatic (removed H, per Wikipedia)` — `H` is s
 
 ---
 
-## Finding 2 — Credentials committed in plaintext *(High, OPEN)*
+## Finding 2 — Credentials committed in plaintext *(High, PARTIAL)*
+
+> **Partly addressed.** `src/ingest_excel_to_db.py` is now a deprecation stub containing no
+> credential, and `src/build_dataset.py` needs no database at all, so nothing in the
+> pipeline requires the password any more. **Step 1 below is still outstanding and still
+> matters:** the value remains in git history across several merged pull requests.
 
 `src/ingest_excel_to_db.py:65` contains a hardcoded MySQL password in version control.
 
@@ -107,7 +117,12 @@ Also fix the stale comment `#3 Aromatic (removed H, per Wikipedia)` — `H` is s
 
 ---
 
-## Finding 3 — No positional or run-length features *(High, OPEN)*
+## Finding 3 — No positional or run-length features *(High, FIXED)*
+
+> **Fixed** in `src/sequence_features.py`. Measured on the rebuilt dataset, within the
+> length-15 stratum: `homopolymer_run` AUC 0.606 and `max_pbeta_window6` 0.599, both of
+> which beat the source paper's own `h stretch` (0.581). `peptide_len` is 0.500 in the same
+> stratum, confirming it carries no within-cohort information.
 
 Every descriptor is a whole-sequence aggregate: a mean hydrophobicity, a total count, a
 one-hot of the first residue, or a dipeptide tally. None encodes *where* residues sit or how
@@ -138,21 +153,46 @@ See `.claude/skills/spps-synthesizability-review/` for an implementation of thes
 
 ---
 
-## Finding 4 — Generation script does not reproduce the committed data *(Medium, OPEN)*
+## Finding 4 — Generation script does not reproduce the committed data *(Medium, FIXED)*
 
-`src/ingest_excel_to_db.py` passes `None` for Cornette hydrophobicity:
+> **Correction.** An earlier version of this finding attributed the mismatch to the Cornette
+> hydrophobicity column, claiming it held 1598 distinct values while the script wrote `None`.
+> **That was wrong** — it came from an off-by-one in a column index: field 27 is
+> `hydrophobic_cornette` and holds exactly **one** distinct value (`0.0`), while field 28 is
+> `hydrophobic_eisenberg`, which is the column with 1598 values. The conclusion happened to
+> be right for an entirely different reason, found below. The error is left on the record
+> rather than quietly rewritten.
 
-```python
-#peptide.hydrophobicity("Cornette"), #7
-None,
+### The actual cause: the Aliphatic group changed and the data was never regenerated
+
+`data/raw/peptide_baza.csv` was generated with `Aliphatic = (A, I, L, V)`. Commit `388d6b4`
+("Correct compositional property categorization…") changed it to `(A, I, L, M, V)`, adding
+methionine, and the CSV was never rebuilt. The committed script and the committed data
+therefore disagree on the **468 rows containing M**, in exactly the two columns fed by that
+group.
+
+Verified by exhaustive reconstruction: rebuilding every historical value from
+`data/raw/ao2c02425_si_002.xlsx` under the hypothesis *"compositional mis-mapping (Finding 1)
+plus methionine-free Aliphatic"* reproduces **46,046 of 46,046 cells with zero mismatches**.
+Under the committed script's own grouping it mismatches 936 cells, all in `non-polar_group`
+and `polar_group`.
+
+### `hydrophobic_cornette` is a dead column
+
+It is constant `0.0` in all 1771 rows. The `peptides` library at the pinned version
+**0.5.0 has no Cornette scale at all** — `p.hydrophobicity("Cornette")` raises
+`Invalid hydrophobicity scale`. That is why the original author commented it out and
+substituted `None`. A constant column is not a feature, and this one cannot be computed with
+the pinned dependency, so it is dropped rather than repaired.
+
+### Fix
+
+`src/build_dataset.py` replaces the MySQL path entirely. Its `--legacy-check` mode performs
+the reconstruction above as a regression test, so the claim is re-verifiable:
+
+```bash
+python src/build_dataset.py --legacy-check
 ```
-
-But `data/raw/peptide_baza.csv` has **1598 distinct non-null values** in
-`hydrophobic_cornette`. The committed data was produced by a different version of the script
-than the committed one. Re-running it today silently nulls that feature.
-
-`requirements.txt` correctly pins `peptides==0.5.0` — good, since descriptor values are
-library-version dependent. The script itself still needs to reproduce the dataset exactly.
 
 ---
 
