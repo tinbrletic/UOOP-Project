@@ -4,6 +4,18 @@ Academic ML study (Izborni Projekt — Evolucijsko racunarstvo) reproducing and 
 
 The original paper is at `docs/paper.pdf`. See `CLAUDE.md` for in-depth implementation notes (caching layer, statistical post-hocs, gotchas).
 
+## Two deliverables in this repository
+
+| | Where | Start at |
+|---|---|---|
+| **1. The agent skill** — finds what affects peptide synthesis outcome in any given content (papers, handbooks, codebases, datasets), with a sequence-liability scanner | [`.claude/skills/spps-synthesizability-review/`](.claude/skills/spps-synthesizability-review/) | [its README](.claude/skills/spps-synthesizability-review/README.md), then [the 5-minute demo](.claude/skills/spps-synthesizability-review/demo/README.md) |
+| **2. The ML study** — reproduction and extension of Gutman et al. 2022 | `src/`, `data/`, `results/` | [`docs/05-results.md`](docs/05-results.md) for the findings; the Quickstart below to run it |
+
+Skill at a glance: self-contained, Python 3.8+ standard library (optional `openpyxl` for
+`.xlsx`), no build step. `python3 scripts/scan_peptides.py --selftest` from its directory
+verifies the install. Its testing record, including where the tests were weak, is in
+[`references/validation.md`](.claude/skills/spps-synthesizability-review/references/validation.md).
+
 ## Layout
 
 ```

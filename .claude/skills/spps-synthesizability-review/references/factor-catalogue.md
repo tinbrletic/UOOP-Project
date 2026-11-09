@@ -7,11 +7,54 @@ Each entry gives the **mechanism**, the **vocabulary** sources use for it, and w
 **sequence-detectable** (computable before the peptide exists) or only observable after the
 fact. `→ rule` names the corresponding check in `../scripts/scan_peptides.py` where one exists.
 
-**Source types** used below: `textbook` (reference works and monographs on peptide synthesis),
-`vendor` (synthesiser and reagent manufacturers' handbooks and application notes), `primary`
-(peer-reviewed studies). Most mechanism is textbook-grade; most graded motif tables are
-vendor-grade. Neither is a substitute for a controlled experiment — see the evidence ladder in
-SKILL.md.
+---
+
+## Sources and how they are cited
+
+Four sources are cited by location so a claim can be checked. Anything **not** carrying one of
+these tags is marked `[uncited]` and should be treated as background knowledge of unverified
+provenance — see "Uncited entries" below.
+
+| Tag | Source | Citation form |
+|---|---|---|
+| **HW-E22a**, **HW-E22b**, **HW-E22c** | Houben-Weyl, *Methods in Organic Chemistry* Vol. E22a–c, *Synthesis of Peptides and Peptidomimetics*, Thieme 1999 | `HW-E22a p726` |
+| **GPT** | Gyros Protein Technologies, *SPPS Tips For Success: A Guide to Better Peptide Synthesis* (vendor deck) | `GPT p70` |
+| **Gutman-2022** | Gutman et al., *Predicting the Success of Fmoc-Based Peptide Synthesis*, ACS Omega 2022 | `Gutman-2022 p2` |
+| **Tamás-2026** | Tamás, Alberts, Laino & Hartrampf, *Amino acid composition drives aggregation during peptide synthesis*, Nat. Chem. 18(4):677–685, 2026, doi:10.1038/s41557-026-02090-0 | by section name |
+
+> ### ⚠ Page numbers are PDF pages, not printed pages
+>
+> Every `pN` above refers to the **page of the PDF file** as distributed, not the printed page
+> number of the published volume. The two differ, substantially in the Houben-Weyl volumes. A
+> reader cannot check a citation without knowing which is meant, so this is stated once here
+> rather than repeated.
+>
+> Houben-Weyl pages were located in text extracted with `pdftotext`; the OCR reorders lines on
+> two-column pages and joins adjacent words, so a quotation may not appear contiguously on the
+> page. Each quotation below was confirmed by fixed-string search before use.
+>
+> Tamás-2026 was read as PubMed Central full text, which carries no page numbers, so it is
+> cited by section (Main / Results / Conclusion / Methods / Experimental).
+
+### Source *types*, for grading
+
+`textbook` (reference works and monographs), `vendor` (manufacturers' handbooks and application
+notes), `primary` (peer-reviewed studies). Most mechanism here is textbook-grade; most graded
+motif tables are vendor-grade. Neither substitutes for a controlled experiment — see the
+evidence ladder in SKILL.md.
+
+### Uncited entries
+
+**Most entries in this catalogue carry no page citation.** They are standard peptide-chemistry
+knowledge, not traceable by the author of this file to a specific location in a source held
+to hand. The absence of a citation IS the mark: if an entry carries no `HW-`, `GPT`, `Gutman-2022`
+or `Tamás-2026` reference, treat it as orientation — usable for recognising a factor,
+**not** quotable as established, and worth verifying against a primary source before they go
+into anything that will be reviewed.
+
+This is a deliberate choice. Attaching a plausible-looking reference to a claim whose source
+has not been checked is worse than admitting the gap, because it defeats the reader's ability
+to verify. Where a citation appears below, it was located in the text and confirmed.
 
 ---
 
@@ -54,7 +97,19 @@ SKILL.md.
 intermolecular association into β-sheet-like structures. In these aggregates the reactive
 N-termini become inaccessible, so deprotection and coupling cannot go to completion. This is
 a *solvation* failure, not a reactivity failure — which is why the remedies are mostly about
-disrupting the structure rather than activating harder. (`textbook`)
+disrupting the structure rather than activating harder.
+
+> **HW-E22a p24**, §1.2.1.3 "Difficult Sequences", verbatim: "the most serious potential
+> problem facing both synthesis in solution and on solid support is the sequence-dependent
+> poor solubility or solvation of the protected peptides, which prevents reactions from
+> proceeding to completion. In solution and on resin, this phenomenon, described as
+> **difficult sequences**, derives from the intermolecular association of the protected
+> peptide derivatives into β-sheet-like structures... In these aggregates the N-termini
+> become inaccessible for further chemistry."
+>
+> Remedies listed there: solvent composition changes ("magic mixtures"), chaotropic salts,
+> higher temperature, solubilising protecting groups, backbone amide protection, and
+> pseudoprolines. (`textbook`)
 
 **Vocabulary.** "difficult sequence", "difficult coupling", "aggregation", "β-sheet
 formation", "poor solvation", "incomplete coupling", "chain association", "onset of
@@ -79,7 +134,7 @@ signal alone misses the canonical case.
 | Chain length | **This is cumulative-yield risk, not aggregation risk.** Kept as a separate rule for that reason. Length also frequently acts as a cohort proxy in real datasets — stratify before believing it. | `agg.length` (category `YIELD`) |
 
 > **The poly-Ala correction.** The founding example of a difficult sequence in the primary
-> reference literature is **decaalanine**, which failed on standard polystyrene with
+> reference literature is **decaalanine** (HW-E22a p726), which failed on standard polystyrene with
 > β-structure, severe resin shrinkage, and NMR line-broadening as physical evidence. Alanine
 > is in none of the hydrophobic sets, and its own β-sheet propensity is *low*
 > (Chou-Fasman P<sub>β</sub> ≈ 0.83). It aggregates because a homopolymer of a small,
@@ -138,9 +193,9 @@ signal alone misses the canonical case.
 >
 > | Reported window | Source |
 > |---|---|
-> | "the zone about 8-10 residues out from the resin"; "will rarely collapse after 25 residues" | Houben-Weyl E22a (`textbook`) |
-> | "within 5-15 amino acids from the anchoring point" | Tamás et al. 2026 (`primary`, citing earlier work) |
-> | positions 2-12 (the window their mitigation tool actually searches) | same paper, unjustified |
+> | "the zone about 8-10 residues out from the resin" (HW-E22a p726); "will rarely collapse after 25 residues" (HW-E22b p66) | Houben-Weyl (`textbook`) |
+> | "within 5-15 amino acids from the anchoring point" | Tamás-2026, Main (`primary`, citing earlier work) |
+> | positions 2-12 (the window their mitigation tool actually searches) | Tamás-2026, Results §4 — unjustified |
 >
 > The implementation uses 8–25 as a deliberately wide span. **Treat the exact bounds as
 > unsettled** and report which source a positional claim came from. The agreement that matters
@@ -184,10 +239,10 @@ somewhere else.
 | Mitigation | Cost / caveat |
 |---|---|
 | Solvent change, "magic mixtures" | Changes racemization and aspartimide rates at the same time; a solvent swap is never a single-variable change |
-| Chaotropic salts (NaClO₄ > KSCN) | **Contested.** Presented as the remedy in some chapters and as "a minor effect" versus heating in others — note that these are often measured on *different steps* (coupling vs Fmoc removal), which may dissolve the conflict |
+| Chaotropic salts (NaClO₄ > KSCN) — HW-E22a p727 | **Contested.** Presented as the remedy in some chapters and as "a minor effect" versus heating in others — note that these are often measured on *different steps* (coupling vs Fmoc removal), which may dissolve the conflict |
 | Elevated temperature (~60 °C) | Raises racemization, aspartimide and Arg δ-lactam. Benefit against aggregation is **explicitly uncertain** in the source literature, hedged and asserted within the same chapter |
-| Backbone amide protection (Hmb, Dmb) | **Costs a coupling.** Acylating *onto* an Hmb-protected residue is prohibitively slow for β-branched Val/Ile/Thr — >24 h with repeat couplings, except Hmb-Gly. Removal fails near easily protonated residues and near His. Introduction needs the Hmb hydroxyl protected or the activated carboxyl forms an intramolecular phenyl ester. So Hmb converts an aggregation problem into a steric coupling problem one position later |
-| Pseudoproline dipeptides | Only available at Ser, Thr or Cys positions; reverts to the native residue on cleavage, so it constrains where you can intervene, not whether |
+| Backbone amide protection (Hmb, Dmb) | **Costs a coupling.** Acylating *onto* an Hmb-protected residue is prohibitively slow for β-branched Val/Ile/Thr — >24 h with repeat couplings, except Hmb-Gly (HW-E22b p64). Removal fails near easily protonated residues and near His. Introduction needs the Hmb hydroxyl protected or the activated carboxyl forms an intramolecular phenyl ester. So Hmb converts an aggregation problem into a steric coupling problem one position later |
+| Pseudoproline dipeptides — HW-E22a p24, p31 | Only available at Ser, Thr or Cys positions; reverts to the native residue on cleavage, so it constrains where you can intervene, not whether |
 | Lower resin loading | Throughput cost; reported ranges differ by an order of magnitude between contexts (<0.15 mmol/g, 0.04–0.3 mmol/g, ~0.05 mmol/g) |
 | Fragment condensation / ligation | The C-terminal residue of an activated segment is classically limited to **Gly or Pro** to avoid epimerising the junction. Upside: segment-level deletions differ by a whole segment and are *easier* to purify than single-residue deletions |
 | Capping (Ac₂O, acetylimidazole) | Does not improve yield — it converts deletions into truncations, which are easier to separate. A purification aid, not a synthesis fix |
@@ -220,7 +275,7 @@ somewhere else.
 **Mechanism.** Repeated base exposure (piperidine, each deprotection cycle) on Asp-containing
 sequences promotes cyclisation to a succinimide, which then opens to a family of by-products
 including the β-peptide and the epimer — reported as up to nine distinct species. Risk
-depends strongly on the residue **following** Asp. (`vendor`, `primary`)
+depends strongly on the residue **following** Asp. Graded table below from GPT p70. (`vendor`, `primary`)
 
 **Vocabulary.** "aspartimide", "succinimide", "α/β-peptide", "piperidide", "[M+67]",
 "base-mediated side reaction".
@@ -265,14 +320,14 @@ assay.
 **Mechanism.** The free N-terminus of the resin-bound dipeptide attacks the C-terminal ester,
 forming a six-membered ring and **cleaving the peptide off the resin** — an outright loss, not
 an impurity. Occurs mainly during deprotection of the second residue. Accelerated when the
-two residues can adopt a cis arrangement. (`vendor`, `textbook`)
+two residues can adopt a cis arrangement. (`vendor`, `textbook`; GPT p63)
 
 **Vocabulary.** "diketopiperazine", "DKP", "2,5-diketopiperazine", "chain loss from resin",
 "first-cycle loss".
 
 **Sequence-detectable.** Risk motifs at the C-terminal dipeptide: **Pro at position 1 or 2
 from the C-terminus**, N-methylated residues, alternating D/L configuration, and Gly in the
-C-terminal dipeptide. → `side.diketopiperazine`
+C-terminal dipeptide (GPT p63). → `side.diketopiperazine`
 
 **Mitigations.** 2-chlorotrityl (CTC) resin when Pro is C-terminal (steric block); shorter
 deprotection; HOBt or Oxyma added to the piperidine; carbodiimide coupling to avoid tertiary
@@ -282,7 +337,8 @@ base.
 
 **Mechanism.** Base-mediated activation can form an oxazolone intermediate at the activated
 residue, which racemises. Worst with pre-activation, strong base and heat. (`vendor`,
-`textbook`)
+`textbook`; GPT p57 names His, Cys and N-alkylated residues as most prone, via the
+oxazolone mechanism)
 
 **Vocabulary.** "racemization", "epimerization", "oxazolone", "D-isomer", "diastereomer",
 "chiral purity".
@@ -294,7 +350,7 @@ measured one.
 
 | Propensity | Residues |
 |---|---|
-| **High** | **Ser, Cys, Asp** |
+| **High** | **Ser, Cys, Asp** (HW-E22b p665, p668) |
 | Moderate | Phe, Ala |
 | Low | Val, Ile |
 
@@ -336,8 +392,8 @@ His).
 
 | Liability | Mechanism | Detect | → rule |
 |---|---|---|---|
-| **Pyroglutamate** | N-terminal Gln cyclises, capping the chain | Gln at position 1 (Glu lower risk) | `side.pyroglutamate` |
-| **Arg δ-lactam** | Arg side chain cyclises during activation, giving substoichiometric coupling and **des-Arg deletion peptides**; recoupling often needed; worse under microwave | Arg present | `side.arg_lactam` |
+| **Pyroglutamate** | N-terminal Gln cyclises, capping the chain (GPT p65) | Gln at position 1 (Glu lower risk) | `side.pyroglutamate` |
+| **Arg δ-lactam** | Arg side chain cyclises during activation, giving substoichiometric coupling and **des-Arg deletion peptides**; recoupling often needed; worse under microwave (GPT p66) | Arg present | `side.arg_lactam` |
 | **Disulfide strategy** | ≥2 Cys requires orthogonal protection and a defined oxidation order | Cys count ≥ 2 | `side.disulfide` |
 | **Oxidation** | Met, Trp, Cys are oxidation-sensitive; drives cleavage-cocktail scavenger choice | Met/Trp/Cys present | `side.oxidation` |
 | **Deamidation** | Asn-Gly/Asn-Ser are motif hotspots, but deamidation is also **positional**: the same Gln has been reported to deamidate at 3 residues from the C-terminus and *not* at 3 from the N-terminus. A C-terminal Asx-α-amide is especially susceptible. Primarily a **storage/stability** liability rather than an SPPS one — but it is the cleanest published demonstration of *localisation beating composition*, so record it whichever axis it sits on | Asn-Gly/Asn-Ser motif; Asn/Gln within 3 of the C-terminus | `stability.deamidation`, `stability.deamidation_cterm` |
@@ -435,9 +491,9 @@ reviewing, **record which of these the source states and which it omits.**
 | **Crude HPLC purity (UV)** | Fraction of UV absorbance under the target peak | Detector response is not uniform across species; co-elution of close analogues (deletions, epimers) inflates apparent purity |
 | **MS peak abundance ratio** | Target-matching m/z intensity over total | **Ionisation efficiency is strongly sequence-dependent** — basic residues (H, K, R) ionise well in positive ESI and inflate apparent purity. Isobaric by-products are invisible |
 | **Isolated yield** | Mass recovered after purification | Confounds synthesis quality with purification losses and operator effort |
-| **Resin colour tests** (Kaiser/ninhydrin, chloranil) | Free amine present after coupling | **Gives false negatives under aggregation or steric hindrance** — i.e. blind in exactly the difficult sequences the difficult-sequence protocols are for. Inapplicable to N-terminal secondary amines (Pro → isatin/chloranil). N-terminal Asn/Asp/Ser give a brown colour that confounds the read. Bead colour read by eye |
+| **Resin colour tests** (Kaiser/ninhydrin, chloranil) | Free amine present after coupling | **Gives false negatives under aggregation or steric hindrance** (HW-E22a p737, §4.3.2.1.3.1) — i.e. blind in exactly the difficult sequences the difficult-sequence protocols are for. Inapplicable to N-terminal secondary amines (Pro → isatin/chloranil). N-terminal Asn/Asp/Ser give a brown colour that confounds the read. Bead colour read by eye |
 | **Quantitative Fmoc release** | Per-cycle deprotection efficiency | The right measurement in principle, and the reference literature records that it was **attempted and abandoned** for insufficient accuracy. So the multiplicative-yield argument that motivates the whole field is, in that source, unmeasured |
-| **Dibenzofulvene release peak shape** | Qualitative read of deprotection kinetics in continuous-flow UV | A sharp peak means rapid release; "a broad peak with extending tail is associated with the onset of aggregation problems within the matrix". A free, live, *qualitative* diagnostic — distinct from quantitative Fmoc release and much more available |
+| **Dibenzofulvene release peak shape** | Qualitative read of deprotection kinetics in continuous-flow UV | A sharp peak means rapid release; "a broad peak with extending tail is associated with the onset of aggregation problems within the matrix" (HW-E22a p747). A free, live, *qualitative* diagnostic — distinct from quantitative Fmoc release and much more available |
 | **Resin shrinkage, observed** | Visible contraction of the peptide-resin during synthesis | A zero-cost live indicator of chain association. Explicitly reported alongside β-structure formation and NMR line-broadening |
 | **AAA / Edman sequencing** | Composition or sequence confirmation | **Its own chemistry cleaves residual protecting groups**, which can make a poor synthesis appear correct. A confirmation method that partially repairs the sample it is confirming |
 
@@ -446,7 +502,7 @@ reviewing, **record which of these the source states and which it omits.**
 >
 > 1. **Mass and retention are not injective over sequence permutations.** In a blinded
 >    interlaboratory test, a deliberately **reversed peptide of identical mass** was passed as
->    correct by 7 of 20 laboratories; the ones that caught it used Edman sequencing. The same
+>    correct by 7 of 20 laboratories (HW-E22b p771); the ones that caught it used Edman sequencing. The same
 >    study spiked 30% oxidised Met into another peptide and only 7 of 20 detected it. So a
 >    label of "observed mass matches ordered peptide" contains a real fraction of
 >    **mislabelled successes** — the target can be the wrong molecule at the right mass.
@@ -476,7 +532,7 @@ axes, and leaving it out of the taxonomy means leaving it out of reviews.
 
 The body that ran eight annual interlaboratory round-robins concluded that **peptide quality
 depends as much or more on the experience and skill of the personnel than on the instrument
-or method used**. Their distributional data are the strongest empirical material in the
+or method used** (HW-E22b p766, verbatim). Their distributional data are the strongest empirical material in the
 reference literature:
 
 - One year: 17% of submitted samples contained **none** of the correct peptide; 28% of crude
