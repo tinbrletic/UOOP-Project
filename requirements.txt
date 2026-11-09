@@ -1,0 +1,18 @@
+# Core pipeline (src/) and experiments/
+pandas==3.0.3
+numpy==2.4.6
+scikit-learn==1.8.0
+imbalanced-learn==0.14.1
+peptides==0.5.0
+openpyxl==3.1.5
+joblib==1.5.3
+scipy==1.17.1
+skrebate==0.62
+scikit-posthocs==0.13.0
+matplotlib==3.10.9
+pyarrow==24.0.0
+
+# Optional: only needed to rebuild from the original MySQL database
+# (src/ingest_excel_to_db.py, experiments/fs_rand_for.py, experiments/10_fold_cross_validation.py).
+# Skip unless you actually have a local 'peptide-dataset' MySQL instance — the CSVs are already exported.
+# mysql-connector-python>=9.0

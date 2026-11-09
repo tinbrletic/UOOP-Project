@@ -1,0 +1,20 @@
+>decaalanine  canonical difficult sequence (literature)
+AAAAAAAAAA
+>ACP_65_74  standard difficult-coupling benchmark
+VQAAIDYING
+>GLP1_7_36  natural 30-mer, hydrophobic C-terminal region
+HAEGTFTSDVSSYLEGQAAKEFIAWLVKGR
+>aliphatic_run  contrived: long I/L/M/V run in the collapse zone
+VQLLLLIDYING
+>pseudopro_site  as above, with a Ser inside the difficult region
+VQLLLLSIDYING
+>aspartimide_DG  contains Asp-Gly, the top-graded aspartimide motif
+EAYDGRVLVPSGY
+>multi_liability  N-terminal Gln, Asp-Gly, C-terminal Pro, aliphatic run
+QLLLLVDGKP
+>racem_and_DG  His and Cys present, Asp-Gly, C-terminal Pro
+TTAPAICHDGKAHFP
+>benign_gly_ser  control: Gly/Ser rich, should stay quiet
+AGSGAGSGAK
+>benign_charged  control: fully charged, highly soluble
+EEKKEEKKEEKK

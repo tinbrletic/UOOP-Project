@@ -1,0 +1,315 @@
+Selection_Method,Feature_Name,Rank,Selection_Type
+Mann-Whitney,hydrophobic_janin,1,Statistical
+Mann-Whitney,hydrophobic_kytedoolittle,2,Statistical
+Mann-Whitney,max_kd_window5,3,Statistical
+Mann-Whitney,hydrophobic_eisenberg,4,Statistical
+Mann-Whitney,n_paper_b,5,Statistical
+Mann-Whitney,cruciani_prp1,6,Statistical
+Mann-Whitney,hydrophobic_engelman,7,Statistical
+Mann-Whitney,boman,8,Statistical
+Mann-Whitney,peptide_len,9,Statistical
+Mann-Whitney,isoelectric_point,10,Statistical
+Mann-Whitney,n_paper_h,11,Statistical
+Mann-Whitney,charge,12,Statistical
+Mann-Whitney,hydrophobic_roseman,13,Statistical
+Mann-Whitney,no_disruptor_run,14,Statistical
+Mann-Whitney,aliphatic_index,15,Statistical
+Wilcoxon,hydrophobic_janin,1,Statistical
+Wilcoxon,hydrophobic_kytedoolittle,2,Statistical
+Wilcoxon,max_kd_window5,3,Statistical
+Wilcoxon,hydrophobic_eisenberg,4,Statistical
+Wilcoxon,boman,5,Statistical
+Wilcoxon,cruciani_prp1,6,Statistical
+Wilcoxon,hydrophobic_engelman,7,Statistical
+Wilcoxon,homopolymer_run,8,Statistical
+Wilcoxon,n_paper_b,9,Statistical
+Wilcoxon,no_disruptor_run,10,Statistical
+Wilcoxon,n_paper_h,11,Statistical
+Wilcoxon,charge,12,Statistical
+Wilcoxon,isoelectric_point,13,Statistical
+Wilcoxon,peptide_len,14,Statistical
+Wilcoxon,aliphatic_index,15,Statistical
+Chi-square,hydrophobic_janin,1,Statistical
+Chi-square,hydrophobic_kytedoolittle,2,Statistical
+Chi-square,max_kd_window5,3,Statistical
+Chi-square,hydrophobic_eisenberg,4,Statistical
+Chi-square,n_paper_b,5,Statistical
+Chi-square,peptide_len,6,Statistical
+Chi-square,boman,7,Statistical
+Chi-square,cruciani_prp1,8,Statistical
+Chi-square,hydrophobic_engelman,9,Statistical
+Chi-square,isoelectric_point,10,Statistical
+Chi-square,charge,11,Statistical
+Chi-square,no_disruptor_run,12,Statistical
+Chi-square,n_paper_h,13,Statistical
+Chi-square,hydrophobic_roseman,14,Statistical
+Chi-square,cruciani_prp2,15,Statistical
+KS,hydrophobic_janin,1,Statistical
+KS,hydrophobic_eisenberg,2,Statistical
+KS,hydrophobic_kytedoolittle,3,Statistical
+KS,max_kd_window5,4,Statistical
+KS,peptide_len,5,Statistical
+KS,n_paper_b,6,Statistical
+KS,isoelectric_point,7,Statistical
+KS,charge,8,Statistical
+KS,boman,9,Statistical
+KS,cruciani_prp1,10,Statistical
+KS,hydrophobic_engelman,11,Statistical
+KS,hydrophobic_roseman,12,Statistical
+KS,no_disruptor_run,13,Statistical
+KS,n_paper_h,14,Statistical
+KS,aliphatic_index,15,Statistical
+Integrated-SelectFromModel (L1-LR selector) + LR,aliphatic_index,1,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,anchor_zone_frac,2,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,aspartimide_score,3,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,beta_branched_run,4,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,boman,5,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,cruciani_prp2,6,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,cruciani_prp3,7,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,h_stretch,8,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,homopolymer_run,9,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,hydrophobic_janin,10,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,hydrophobic_moment,11,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,instability_index,12,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,isoelectric_point,13,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,max_kd_window5,14,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,max_pbeta_window6,15,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,motif_DG,16,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,motif_cterm_G,17,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,motif_cterm_P,18,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,motif_nterm_E,19,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,motif_nterm_Q,20,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,n_paper_a,21,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,n_paper_b,22,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,n_paper_h,23,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,n_paper_l,24,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,n_paper_p,25,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,n_paper_r,26,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,n_paper_s,27,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,n_pseudopro_sites,28,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,n_racem_prone,29,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,no_disruptor_charged_frac,30,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,no_disruptor_run,31,Integrated
+Integrated-SelectFromModel (L1-LR selector) + LR,peptide_len,32,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,aliphatic_index,1,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,anchor_zone_frac,2,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,aspartimide_score,3,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,beta_branched_run,4,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,boman,5,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,cruciani_prp2,6,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,cruciani_prp3,7,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,h_stretch,8,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,homopolymer_run,9,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,hydrophobic_janin,10,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,hydrophobic_moment,11,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,instability_index,12,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,isoelectric_point,13,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,max_kd_window5,14,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,max_pbeta_window6,15,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,motif_DG,16,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,motif_cterm_G,17,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,motif_cterm_P,18,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,motif_nterm_E,19,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,motif_nterm_Q,20,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,n_paper_a,21,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,n_paper_b,22,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,n_paper_h,23,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,n_paper_l,24,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,n_paper_p,25,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,n_paper_r,26,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,n_paper_s,27,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,n_pseudopro_sites,28,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,n_racem_prone,29,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,no_disruptor_charged_frac,30,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,no_disruptor_run,31,Integrated
+Integrated-SelectFromModel (L1-LR selector) + SVM,peptide_len,32,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,aliphatic_index,1,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,anchor_zone_frac,2,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,aspartimide_score,3,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,beta_branched_run,4,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,boman,5,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,cruciani_prp2,6,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,cruciani_prp3,7,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,h_stretch,8,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,homopolymer_run,9,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,hydrophobic_janin,10,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,hydrophobic_moment,11,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,instability_index,12,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,isoelectric_point,13,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,max_kd_window5,14,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,max_pbeta_window6,15,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,motif_DG,16,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,motif_cterm_G,17,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,motif_cterm_P,18,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,motif_nterm_E,19,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,motif_nterm_Q,20,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,n_paper_a,21,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,n_paper_b,22,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,n_paper_h,23,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,n_paper_l,24,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,n_paper_p,25,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,n_paper_r,26,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,n_paper_s,27,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,n_pseudopro_sites,28,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,n_racem_prone,29,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,no_disruptor_charged_frac,30,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,no_disruptor_run,31,Integrated
+Integrated-SelectFromModel (L1-LR selector) + KNN,peptide_len,32,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,aliphatic_index,1,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,anchor_zone_frac,2,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,aspartimide_score,3,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,beta_branched_run,4,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,boman,5,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,cruciani_prp2,6,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,cruciani_prp3,7,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,h_stretch,8,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,homopolymer_run,9,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,hydrophobic_janin,10,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,hydrophobic_moment,11,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,instability_index,12,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,isoelectric_point,13,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,max_kd_window5,14,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,max_pbeta_window6,15,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,motif_DG,16,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,motif_cterm_G,17,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,motif_cterm_P,18,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,motif_nterm_E,19,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,motif_nterm_Q,20,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,n_paper_a,21,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,n_paper_b,22,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,n_paper_h,23,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,n_paper_l,24,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,n_paper_p,25,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,n_paper_r,26,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,n_paper_s,27,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,n_pseudopro_sites,28,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,n_racem_prone,29,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,no_disruptor_charged_frac,30,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,no_disruptor_run,31,Integrated
+Integrated-SelectFromModel (L1-LR selector) + Naive Bayes,peptide_len,32,Integrated
+Integrated-SelectFromModel (RF selector) + RF,aliphatic_index,1,Integrated
+Integrated-SelectFromModel (RF selector) + RF,anchor_zone_frac,2,Integrated
+Integrated-SelectFromModel (RF selector) + RF,boman,3,Integrated
+Integrated-SelectFromModel (RF selector) + RF,charge,4,Integrated
+Integrated-SelectFromModel (RF selector) + RF,cruciani_prp1,5,Integrated
+Integrated-SelectFromModel (RF selector) + RF,cruciani_prp2,6,Integrated
+Integrated-SelectFromModel (RF selector) + RF,cruciani_prp3,7,Integrated
+Integrated-SelectFromModel (RF selector) + RF,hydrophobic_eisenberg,8,Integrated
+Integrated-SelectFromModel (RF selector) + RF,hydrophobic_engelman,9,Integrated
+Integrated-SelectFromModel (RF selector) + RF,hydrophobic_hoppwoods,10,Integrated
+Integrated-SelectFromModel (RF selector) + RF,hydrophobic_janin,11,Integrated
+Integrated-SelectFromModel (RF selector) + RF,hydrophobic_kytedoolittle,12,Integrated
+Integrated-SelectFromModel (RF selector) + RF,hydrophobic_moment,13,Integrated
+Integrated-SelectFromModel (RF selector) + RF,hydrophobic_roseman,14,Integrated
+Integrated-SelectFromModel (RF selector) + RF,instability_index,15,Integrated
+Integrated-SelectFromModel (RF selector) + RF,isoelectric_point,16,Integrated
+Integrated-SelectFromModel (RF selector) + RF,max_kd_window5,17,Integrated
+Integrated-SelectFromModel (RF selector) + RF,max_pbeta_window6,18,Integrated
+Integrated-SelectFromModel (RF selector) + RF,n_paper_b,19,Integrated
+Integrated-SelectFromModel (RF selector) + RF,n_paper_l,20,Integrated
+Integrated-SelectFromModel (RF selector) + RF,no_disruptor_charged_frac,21,Integrated
+Integrated-SelectFromModel (RF selector) + RF,no_disruptor_run,22,Integrated
+Integrated-SelectFromModel (RF selector) + RF,peptide_len,23,Integrated
+Integrated-SelectFromModel (RF selector) + LR,aliphatic_index,1,Integrated
+Integrated-SelectFromModel (RF selector) + LR,anchor_zone_frac,2,Integrated
+Integrated-SelectFromModel (RF selector) + LR,boman,3,Integrated
+Integrated-SelectFromModel (RF selector) + LR,charge,4,Integrated
+Integrated-SelectFromModel (RF selector) + LR,cruciani_prp1,5,Integrated
+Integrated-SelectFromModel (RF selector) + LR,cruciani_prp2,6,Integrated
+Integrated-SelectFromModel (RF selector) + LR,cruciani_prp3,7,Integrated
+Integrated-SelectFromModel (RF selector) + LR,hydrophobic_eisenberg,8,Integrated
+Integrated-SelectFromModel (RF selector) + LR,hydrophobic_engelman,9,Integrated
+Integrated-SelectFromModel (RF selector) + LR,hydrophobic_hoppwoods,10,Integrated
+Integrated-SelectFromModel (RF selector) + LR,hydrophobic_janin,11,Integrated
+Integrated-SelectFromModel (RF selector) + LR,hydrophobic_kytedoolittle,12,Integrated
+Integrated-SelectFromModel (RF selector) + LR,hydrophobic_moment,13,Integrated
+Integrated-SelectFromModel (RF selector) + LR,hydrophobic_roseman,14,Integrated
+Integrated-SelectFromModel (RF selector) + LR,instability_index,15,Integrated
+Integrated-SelectFromModel (RF selector) + LR,isoelectric_point,16,Integrated
+Integrated-SelectFromModel (RF selector) + LR,max_kd_window5,17,Integrated
+Integrated-SelectFromModel (RF selector) + LR,max_pbeta_window6,18,Integrated
+Integrated-SelectFromModel (RF selector) + LR,n_paper_b,19,Integrated
+Integrated-SelectFromModel (RF selector) + LR,n_paper_l,20,Integrated
+Integrated-SelectFromModel (RF selector) + LR,no_disruptor_charged_frac,21,Integrated
+Integrated-SelectFromModel (RF selector) + LR,no_disruptor_run,22,Integrated
+Integrated-SelectFromModel (RF selector) + LR,peptide_len,23,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,aliphatic_index,1,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,anchor_zone_frac,2,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,boman,3,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,charge,4,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,cruciani_prp1,5,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,cruciani_prp2,6,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,cruciani_prp3,7,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,hydrophobic_eisenberg,8,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,hydrophobic_engelman,9,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,hydrophobic_hoppwoods,10,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,hydrophobic_janin,11,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,hydrophobic_kytedoolittle,12,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,hydrophobic_moment,13,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,hydrophobic_roseman,14,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,instability_index,15,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,isoelectric_point,16,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,max_kd_window5,17,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,max_pbeta_window6,18,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,n_paper_b,19,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,n_paper_l,20,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,no_disruptor_charged_frac,21,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,no_disruptor_run,22,Integrated
+Integrated-SelectFromModel (RF selector) + KNN,peptide_len,23,Integrated
+Integrated-RFECV (L1-LR) + LR,aliphatic_index,1,Integrated
+Integrated-RFECV (L1-LR) + LR,anchor_zone_frac,2,Integrated
+Integrated-RFECV (L1-LR) + LR,h_stretch,3,Integrated
+Integrated-RFECV (L1-LR) + LR,hydrophobic_janin,4,Integrated
+Integrated-RFECV (L1-LR) + LR,instability_index,5,Integrated
+Integrated-RFECV (L1-LR) + LR,isoelectric_point,6,Integrated
+Integrated-RFECV (L1-LR) + LR,max_kd_window5,7,Integrated
+Integrated-RFECV (L1-LR) + LR,max_pbeta_window6,8,Integrated
+Integrated-RFECV (L1-LR) + LR,n_paper_a,9,Integrated
+Integrated-RFECV (L1-LR) + LR,n_paper_b,10,Integrated
+Integrated-RFECV (L1-LR) + LR,n_paper_h,11,Integrated
+Integrated-RFECV (L1-LR) + LR,n_paper_l,12,Integrated
+Integrated-RFECV (L1-LR) + LR,n_paper_p,13,Integrated
+Integrated-RFECV (L1-LR) + LR,n_paper_r,14,Integrated
+Integrated-RFECV (L1-LR) + LR,n_paper_s,15,Integrated
+Integrated-RFECV (L1-LR) + LR,n_pseudopro_sites,16,Integrated
+Integrated-RFECV (L1-LR) + LR,n_racem_prone,17,Integrated
+Integrated-RFECV (L1-LR) + LR,no_disruptor_run,18,Integrated
+Integrated-RFECV (L1-LR) + LR,peptide_len,19,Integrated
+Integrated-RFECV (L1-LR) + KNN,aliphatic_index,1,Integrated
+Integrated-RFECV (L1-LR) + KNN,anchor_zone_frac,2,Integrated
+Integrated-RFECV (L1-LR) + KNN,h_stretch,3,Integrated
+Integrated-RFECV (L1-LR) + KNN,hydrophobic_janin,4,Integrated
+Integrated-RFECV (L1-LR) + KNN,instability_index,5,Integrated
+Integrated-RFECV (L1-LR) + KNN,isoelectric_point,6,Integrated
+Integrated-RFECV (L1-LR) + KNN,max_kd_window5,7,Integrated
+Integrated-RFECV (L1-LR) + KNN,max_pbeta_window6,8,Integrated
+Integrated-RFECV (L1-LR) + KNN,n_paper_a,9,Integrated
+Integrated-RFECV (L1-LR) + KNN,n_paper_b,10,Integrated
+Integrated-RFECV (L1-LR) + KNN,n_paper_h,11,Integrated
+Integrated-RFECV (L1-LR) + KNN,n_paper_l,12,Integrated
+Integrated-RFECV (L1-LR) + KNN,n_paper_p,13,Integrated
+Integrated-RFECV (L1-LR) + KNN,n_paper_r,14,Integrated
+Integrated-RFECV (L1-LR) + KNN,n_paper_s,15,Integrated
+Integrated-RFECV (L1-LR) + KNN,n_pseudopro_sites,16,Integrated
+Integrated-RFECV (L1-LR) + KNN,n_racem_prone,17,Integrated
+Integrated-RFECV (L1-LR) + KNN,no_disruptor_run,18,Integrated
+Integrated-RFECV (L1-LR) + KNN,peptide_len,19,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,aliphatic_index,1,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,anchor_zone_frac,2,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,h_stretch,3,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,hydrophobic_janin,4,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,instability_index,5,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,isoelectric_point,6,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,max_kd_window5,7,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,max_pbeta_window6,8,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,n_paper_a,9,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,n_paper_b,10,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,n_paper_h,11,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,n_paper_l,12,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,n_paper_p,13,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,n_paper_r,14,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,n_paper_s,15,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,n_pseudopro_sites,16,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,n_racem_prone,17,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,no_disruptor_run,18,Integrated
+Integrated-RFECV (L1-LR) + Naive Bayes,peptide_len,19,Integrated
