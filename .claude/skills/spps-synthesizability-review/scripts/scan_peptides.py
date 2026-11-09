@@ -302,15 +302,22 @@ def check_aggregation(seq):
                                  '%.0f%% hydrophobic/beta-branched.'
                                  % (min(25, n), 100 * frac), [lo_i + 1]))
 
-    # Rescue opportunity, not a liability.
+    # Liability AND repair site, which are the same fact seen twice. As Ser(tBu)/Thr(tBu)
+    # these are reported among the strongest aggregation promoters -- the tBu ether behaves
+    # aliphatically -- and they are also the only positions where a pseudoproline dipeptide
+    # can be installed. So this is the most actionable finding the scanner emits: rank these
+    # positions and substitute the top one. Reported at MEDIUM so it surfaces by default.
     if run >= 3:
         lo, hi = max(1, pos - 2), min(n, pos + run + 1)
         sites = [i for i in range(lo, hi + 1) if seq[i - 1] in PSEUDOPRO_PRECURSOR]
         if sites:
-            f.append(Finding('agg.pseudoproline_site', 'INFO',
+            f.append(Finding('agg.pseudoproline_site', 'MEDIUM',
                              'Ser/Thr/Cys at position(s) %s sits in or beside the difficult '
-                             'region - a pseudoproline dipeptide can be installed here to '
-                             'disrupt beta-sheet association.'
+                             'region. This is BOTH a liability and the repair site: as '
+                             'Ser(tBu)/Thr(tBu) these residues promote aggregation, and they '
+                             'are the only positions where a pseudoproline dipeptide can be '
+                             'installed to disrupt beta-sheet association. Substituting the '
+                             'top-ranked one is the highest-value intervention available.'
                              % ', '.join(map(str, sites)), sites))
     return f
 
@@ -529,6 +536,34 @@ def calibrate(pairs, label_name, failure_value):
     print('A rule marked UNTESTED could not have shown an effect on this data at any')
     print('strength. That is a statement about the dataset, not about the chemistry --')
     print('do not read it as the rule being disproved.')
+
+    # Do the severity tiers mean anything on this data? The tiers are assigned from
+    # mechanism, so whether they rank risk is an empirical question, not a given. A tier
+    # whose failure rate sits at or below the base rate is not a risk tier, whatever its
+    # name says -- and that is a reason to change where you set --min-severity, not a
+    # reason to relabel the rules.
+    print()
+    print('SEVERITY TIERS — measured, not assumed')
+    print('%-10s %6s %6s %10s %8s' % ('worst tier', 'n', 'fail', 'fail rate', 'vs base'))
+    print('-' * 46)
+    inv = {v: k for k, v in SEV_ORDER.items()}
+    tiers = {}
+    for seq, fail, rules, _ in data:
+        _, findings = scan_sequence(seq)
+        worst = max((SEV_ORDER[x.severity] for x in findings), default=0)
+        b = tiers.setdefault(inv[worst], [0, 0])
+        b[0] += 1
+        b[1] += fail
+    for t in ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'):
+        if t in tiers:
+            cnt, fl = tiers[t]
+            rate = fl / cnt
+            mark = '%.2fx' % (rate / base) if base else '-'
+            flag = '' if rate > base else '   <- at or below base rate'
+            print('%-10s %6d %6d %10.3f %8s%s' % (t, cnt, fl, rate, mark, flag))
+    print('%-10s %6d %6d %10.3f' % ('(all)', n, nfail, base))
+    print()
+    print('Set --min-severity to the lowest tier whose rate is clearly above the base rate.')
 
     labels = [d[1] for d in data]
     print()
@@ -819,8 +854,13 @@ def main():
     ap.add_argument('--sep', help='delimiter for text files (else sniffed)')
     ap.add_argument('--format', choices=('text', 'json', 'csv'), default='text')
     ap.add_argument('--top', type=int, default=15, help='worst N sequences to list')
-    ap.add_argument('--min-severity', default='MEDIUM',
-                    choices=tuple(SEV_ORDER), help='floor for per-sequence listing')
+    ap.add_argument('--min-severity', default='HIGH',
+                    choices=tuple(SEV_ORDER),
+                    help="floor for per-sequence listing (default HIGH). MEDIUM is "
+                         "deliberately NOT the default: measured on a labelled set, "
+                         "sequences whose worst finding is MEDIUM fail at BELOW the base "
+                         "rate, so MEDIUM means 'unremarkable', not 'at risk'. Use "
+                         "--label-column to measure the tiers on your own data.")
     ap.add_argument('--summary-only', action='store_true')
     ap.add_argument('--label-column',
                     help='outcome column; given, the script calibrates rules on THIS dataset '
