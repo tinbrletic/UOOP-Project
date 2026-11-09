@@ -186,7 +186,7 @@ def legacy_check(tol=1e-9):
 
 # ----------------------------------------------------------------------- build
 
-def build(convention, fractions, out_path):
+def build(convention, fractions, out_path, x_blocks=False):
     rows = read_source()
     print('read %d peptides from %s' % (len(rows), XLSX))
     records = []
@@ -194,6 +194,8 @@ def build(convention, fractions, out_path):
         rec = {'id': i, 'peptide_seq': seq}
         rec.update(sf.all_features(seq, convention=convention, fractions=fractions))
         rec.update(physicochemical(seq))
+        if x_blocks:
+            rec.update(sf.x_blocks(seq))
         rec['targetcol'] = label
         records.append(rec)
 
@@ -229,12 +231,16 @@ def main():
     ap.add_argument('--with-fractions', action='store_true',
                     help='also emit frac_* columns. They equal n_*/peptide_len exactly, so '
                          'this injects collinearity; off by default')
+    ap.add_argument('--with-x-blocks', action='store_true',
+                    help='also emit the historical X4/X5/X8 blocks (440 columns: N-terminal '
+                         'one-hot, residue counts, 400 dipeptide counts). They help tree '
+                         'ensembles and hurt linear models; see sequence_features.x_blocks')
     ap.add_argument('--out', default=OUT_CSV)
     args = ap.parse_args()
 
     if args.legacy_check:
         return legacy_check()
-    return build(args.convention, args.with_fractions, args.out)
+    return build(args.convention, args.with_fractions, args.out, args.with_x_blocks)
 
 
 if __name__ == '__main__':

@@ -37,8 +37,13 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # SMOTE is now applied per-fold inside the CV loop (training data only),
 # so we load the ORIGINAL unbalanced dataset here. Test folds keep the real
 # class distribution; only training folds are oversampled with SMOTE.
-dataset_file = 'data/processed/peptide_baza_formatted.csv'
-# dataset_file = 'data/processed/peptide_baza_balanced.csv'  # legacy: pre-balanced (causes test-fold leakage)
+# Default is the REBUILT table from src/build_dataset.py, whose compositional columns are
+# named for what they contain. The historical peptide_baza_formatted.csv mislabels eight of
+# nine group columns, so every selected-feature name produced from it is unreliable; see
+# docs/03-dataset-audit-findings.md Finding 1. Override with DATASET=... to reproduce an
+# older run. peptide_baza_balanced.csv is pre-balanced and leaks across folds -- do not use.
+import os as _os
+dataset_file = _os.environ.get('DATASET', 'data/processed/peptide_features.csv')
 
 # --- Caching imports and configuration ---
 import os, json, pickle, hashlib, time, sys, platform
@@ -444,7 +449,9 @@ def log_preprocessing_info(data, columns_to_drop):
     print("-" * 50)
     print(f"Columns to drop: {columns_to_drop}")
     
-    X = data.drop(columns=columns_to_drop)
+    # errors='ignore': the rebuilt table has no hydrophobic_cornette (constant 0.0,
+    # and absent from peptides==0.5.0) and no synthesis_flag.
+    X = data.drop(columns=columns_to_drop, errors='ignore')
     y = data['targetcol']
     
     print(f"Features after preprocessing: {X.shape[1]}")
@@ -1413,8 +1420,14 @@ classifiers = {
     }
 }
 
-# Configure cross-validation
-kf = RepeatedStratifiedKFold(n_splits=10, n_repeats=10, random_state=42)
+# Configure cross-validation.
+# Defaults are unchanged (10x10). CV_SPLITS / CV_REPEATS let a smoke run use a smaller
+# grid without editing this file: CV_REPEATS=1 python src/feature_selection.py
+kf = RepeatedStratifiedKFold(
+    n_splits=int(os.environ.get("CV_SPLITS", 10)),
+    n_repeats=int(os.environ.get("CV_REPEATS", 10)),
+    random_state=42,
+)
 
 # Optional deterministic splits cache
 splits_file = os.path.join(CACHE_DIR, f"splits_{kf.cvargs['n_splits']}x{kf.n_repeats}_seed{kf.random_state}.npz")
@@ -1923,7 +1936,12 @@ for metric_name in ['AUC-ROC', 'F1']:
         out_prefix=out_prefix
     )
 
-results_filename = os.path.join(OUTPUT_DIR, f"feature_selection_results_{dataset_file}_smote_in_cv_{timestamp}.txt")
+# basename, not the full path: dataset_file became 'data/processed/...' in the directory
+# restructure, and embedding it verbatim builds a filename containing slashes, which fails
+# with FileNotFoundError after the whole sweep has already been computed.
+results_filename = os.path.join(
+    OUTPUT_DIR,
+    f"feature_selection_results_{os.path.basename(dataset_file)}_smote_in_cv_{timestamp}.txt")
 
 with open(results_filename, 'w') as f:
     f.write("PEPTIDE SYNTHESIS PREDICTION - FEATURE SELECTION RESULTS\n")

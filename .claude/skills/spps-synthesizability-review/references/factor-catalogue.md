@@ -17,6 +17,37 @@ SKILL.md.
 
 ## Axis 1 — Sequence-intrinsic factors
 
+> ### 1.0 The protected residue, not the residue, is the unit
+>
+> Twelve of the twenty residues carry a side-chain protecting group during synthesis, so the
+> entity whose behaviour you are reasoning about is **not the free amino acid**. Two
+> consequences, both easy to get wrong:
+>
+> **A protecting group can invert a residue's character.** `Ser(tBu)` and `Thr(tBu)` are
+> polar residues wearing a *tert*-butyl ether, and they have been reported as among the
+> strongest aggregation promoters — behaving aliphatically, because the tBu group is what the
+> neighbouring chain actually encounters. Reasoning from "Ser is polar, therefore solubilising"
+> gets this backwards. Any composition or hydrophobicity feature computed on unprotected
+> residues is computing the wrong molecule.
+>
+> **SPPS is not physiological folding, so native-peptide intuitions can reverse.** In water,
+> aromatic side chains *promote* β-sheet aggregation. On resin in DMF, Phe and Tyr(tBu) have
+> been reported to *reduce* it, plausibly by increasing inter-chain spacing. Arg(Pbf) likewise.
+> Treat aggregation propensities imported from the protein-folding literature as hypotheses
+> about SPPS, not as facts.
+>
+> **Grade C, and the caveats matter.** The per-residue ranking behind this comes from SHAP
+> values on a model about nine points above its majority-class baseline, in a dataset where
+> reagent equivalents are a deterministic function of residue identity (so residue and
+> residue-specific protocol are not separable), and where His and Cys deprotection peaks were
+> excised from the label before the ranking was computed — which biases exactly those two
+> residues toward "non-aggregating", where they duly appear. The **principle** is sound and
+> mechanistically well-motivated. The **ordering** is a hypothesis. Do not quote individual
+> residue propensities as measured values, and treat His(Trt), Cys(Trt) and Gln(Trt) as
+> uninterpretable in any direction.
+>
+> Source: Tamás et al., *Nat. Chem.* 2026, doi:10.1038/s41557-026-02090-0 (`primary`).
+
 ### 1.1 On-resin aggregation ("difficult sequences") — the dominant mechanism
 
 **Mechanism.** As the protected chain grows, sequence-dependent poor solvation drives
@@ -56,19 +87,94 @@ signal alone misses the canonical case.
 > relief. **Any rule set built only on hydrophobic-residue identity misses the textbook case
 > by construction.** Encode regularity as well as hydrophobicity.
 
+> ### Open question: does composition outweigh sequence order?
+>
+> This catalogue and SKILL.md both argue that **position beats composition** — that means and
+> totals discard the information that drives aggregation. **A 2026 primary paper reports the
+> opposite**, and it did the experiment rather than asserting it. Record this as unsettled,
+> not as settled either way.
+>
+> **For composition** (Tamás et al., *Nat. Chem.* 2026, doi:10.1038/s41557-026-02090-0).
+> Training on shuffled sequences gave accuracy indistinguishable from the real order
+> (58.0 ± 3.5% vs 57.7 ± 3.3%), a 20-dimensional composition vector matched everything up to
+> a 650M-parameter protein language model (59.5 ± 1.9%), and — the real evidence —
+> **40 peptides were synthesised**: 8 parents × 5 shuffles, holding composition fixed while
+> randomising order. 33 of 40 kept their parent's class.
+>
+> **Against, or at least narrowing it:**
+>
+> - **The aggregate hides an asymmetry.** 19/20 aggregating shuffles stayed aggregating (95%);
+>   only 14/20 non-aggregating ones stayed non-aggregating (70%). Shuffling at fixed
+>   composition *created* aggregation 30% of the time. That is an order effect of practical
+>   size. Composition looks like a near-necessary condition that order can trigger.
+> - **No replicate syntheses.** Without re-making an unshuffled peptide, the 17.5% overall
+>   flip rate cannot be separated from the label's own run-to-run noise — and the duplicate
+>   syntheses that would have measured it were filtered out of the dataset.
+> - **The effect size is ~9 points.** 59.5% against a majority-class baseline of 50.1% that
+>   the paper never states. Label noise predicts exactly the observed signature: a
+>   model-independent plateau *and* shuffle-insensitivity. The paper names this alternative
+>   explanation and does not exclude it.
+> - **Shuffling cannot detect the order effects at issue here.** Its power scales with sequence
+>   complexity and is *identically zero* for low-complexity sequences — shuffling a homopolymer
+>   returns the same string. Decaalanine and the whole backbone-regularity mechanism above are
+>   invisible to that design by construction.
+> - **The paper's own dipeptide result is an order effect.** It reports Gly-Ser and Leu-Leu as
+>   the top aggregation-promoting pairs. A composition vector cannot see Leu-Leu.
+>
+> **How to hold both.** The defensible reading is that **composition carries more of the signal
+> than the field assumed, and order carries less — but not zero**, within one narrow scope: 5–20
+> residue prefixes, canonical residues, 90 °C flow SPPS on a PEG resin, one protecting-group
+> scheme. Keep the positional features; stop assuming they dominate; and when a source claims
+> either side, check whether its experiment *could* have detected the other.
+>
+> **Testable disagreements, if you want to settle it.** On the composition account Ala, Gly and
+> Met come out near-neutral. This catalogue predicts poly-Ala is a catastrophic difficult
+> sequence (decaalanine), Gly is a β-sheet *disruptor* (while the paper's own motif result makes
+> Gly-Ser the top promoter — three incompatible treatments of one residue), and Met belongs in
+> the aliphatic set with I/L/V. Those are the first experiments to run.
+
 > **Position is anchored, not relative.** The literature reports aggregation onset as a
-> *window measured from the resin* — "the critical region was the zone about 8-10 residues
-> out from the resin" — and reports that synthesis "will rarely collapse after 25 residues".
-> So **aggregation risk is non-monotone in chain length**: it rises into a window and then
-> falls. Sliding windows, run lengths and motif presence are all translation-invariant and
-> cannot express this. Index from the C-terminus. This also means a flat "longer is riskier"
-> rule conflates two different mechanisms — aggregation (non-monotone, windowed) and
-> cumulative stepwise yield loss (monotone, multiplicative). Keep them apart.
+> *window measured from the resin*, and **sources disagree on where it is**:
+>
+> | Reported window | Source |
+> |---|---|
+> | "the zone about 8-10 residues out from the resin"; "will rarely collapse after 25 residues" | Houben-Weyl E22a (`textbook`) |
+> | "within 5-15 amino acids from the anchoring point" | Tamás et al. 2026 (`primary`, citing earlier work) |
+> | positions 2-12 (the window their mitigation tool actually searches) | same paper, unjustified |
+>
+> The implementation uses 8–25 as a deliberately wide span. **Treat the exact bounds as
+> unsettled** and report which source a positional claim came from. The agreement that matters
+> is on the shape, not the numbers: **aggregation risk is non-monotone in chain length** — it
+> rises into a window and then falls. Sliding windows, run lengths and motif presence are all
+> translation-invariant and cannot express this. Index from the C-terminus.
+>
+> A flat "longer is riskier" rule conflates two different mechanisms — aggregation
+> (non-monotone, windowed) and cumulative stepwise yield loss (monotone, multiplicative).
+> Keep them apart.
+>
+> **Watch for a source that asserts a window and then uses a position-blind representation.**
+> A normalised composition vector is explicitly length- and position-independent; a paper that
+> builds one and then restricts its recommendations to positions 2–12 is relying on a premise
+> its own model cannot express.
 
 **Hydrophobicity scales.** Sources use Janin, Kyte-Doolittle, Rose, Eisenberg, Engelman GES,
 Hopp-Woods, Cornette and others. They correlate strongly; a result that holds on one usually
 holds on several. If a source reports only one scale and a striking result, check whether it
-is scale-specific — that would be a red flag.
+is scale-specific — that would be a red flag. Note the pinned `peptides==0.5.0` library has
+no Cornette scale at all, so a Cornette column computed with it is not a Cornette column.
+
+> **A hydrophobicity scale is not an aggregation scale, and the difference bites at the
+> aromatics.** Every scale above rates Phe, Trp and Tyr strongly hydrophobic, so a windowed
+> hydrophobicity feature penalises them. But those scales measure partitioning in *water*,
+> and SPPS happens in DMF on a polymer with the side chains protected (§1.0). Phe and
+> Tyr(tBu) have been reported to **reduce** on-resin aggregation, plausibly by increasing
+> inter-chain spacing — the opposite of their behaviour in native peptides.
+>
+> The aliphatic set (I, L, M, V) is **not** in conflict: it is promoting on both accounts.
+> So where a source disagrees with a hydrophobicity-window feature specifically about
+> aromatics, the source may well be right and the feature wrong, because the feature is
+> importing a physiological measurement into a non-physiological phase. Grade C, and worth
+> taking seriously rather than scoring the source down for it.
 
 **Mitigations a source may describe** — their presence tells you the author expected
 aggregation. **Every one has a cost, and the cost is the part a reviewer needs**, because
@@ -87,11 +193,27 @@ somewhere else.
 | Capping (Ac₂O, acetylimidazole) | Does not improve yield — it converts deletions into truncations, which are easier to separate. A purification aid, not a synthesis fix |
 | Extended coupling time / more equivalents | Usually the first lever reached for, but **see the caveats under Axis 2** — prolonged activation dehydrates Gln and Asn, and one interlaboratory study found no correlation between coupling time and correct product |
 
-> **Pseudoprolines are derived from Ser, Thr and Cys.** So a Ser/Thr/Cys inside or beside a
-> hydrophobic run is an *opportunity*, not a liability — a site where the β-sheet can be
-> disrupted by design. This is why composition counts of polar residues often show no signal
-> while the mechanism is nonetheless real: position relative to the difficult region is what
-> matters. → `agg.pseudoproline_site`
+> **Pseudoprolines are derived from Ser, Thr and Cys — which makes those positions a
+> liability AND the repair site at once.**
+>
+> An earlier version of this entry called a Ser/Thr/Cys near a hydrophobic run "an
+> *opportunity*, not a liability". That was half right and the halves matter:
+>
+> - **Liability.** As `Ser(tBu)`/`Thr(tBu)` these are reported among the strongest aggregation
+>   promoters, for the reason in §1.0 — the tBu ether behaves aliphatically.
+> - **Opportunity.** They are the *only* positions where a pseudoproline dipeptide can be
+>   installed, so they are where the problem can be fixed.
+>
+> The two are the same fact seen twice, and it is the most actionable thing in this catalogue:
+> **rank the Ser/Thr/Cys positions by their contribution to the difficulty and substitute the
+> top one.** A prospective demonstration of exactly this raised crude purity from 23% to 69%
+> and from 17% to 75% on two peptides (n=2, and the rank-ordering claim is p≈0.08 — the effect
+> is large, the *ranking* is suggestive).
+>
+> This is also why composition counts of polar residues often show no signal while the
+> mechanism is real: position relative to the difficult region is what matters, and the
+> residue's sign depends on whether you are asking about its protected form or its
+> substitutability. → `agg.pseudoproline_site`, which fires on both counts
 
 ### 1.2 Aspartimide formation
 

@@ -302,15 +302,22 @@ def check_aggregation(seq):
                                  '%.0f%% hydrophobic/beta-branched.'
                                  % (min(25, n), 100 * frac), [lo_i + 1]))
 
-    # Rescue opportunity, not a liability.
+    # Liability AND repair site, which are the same fact seen twice. As Ser(tBu)/Thr(tBu)
+    # these are reported among the strongest aggregation promoters -- the tBu ether behaves
+    # aliphatically -- and they are also the only positions where a pseudoproline dipeptide
+    # can be installed. So this is the most actionable finding the scanner emits: rank these
+    # positions and substitute the top one. Reported at MEDIUM so it surfaces by default.
     if run >= 3:
         lo, hi = max(1, pos - 2), min(n, pos + run + 1)
         sites = [i for i in range(lo, hi + 1) if seq[i - 1] in PSEUDOPRO_PRECURSOR]
         if sites:
-            f.append(Finding('agg.pseudoproline_site', 'INFO',
+            f.append(Finding('agg.pseudoproline_site', 'MEDIUM',
                              'Ser/Thr/Cys at position(s) %s sits in or beside the difficult '
-                             'region - a pseudoproline dipeptide can be installed here to '
-                             'disrupt beta-sheet association.'
+                             'region. This is BOTH a liability and the repair site: as '
+                             'Ser(tBu)/Thr(tBu) these residues promote aggregation, and they '
+                             'are the only positions where a pseudoproline dipeptide can be '
+                             'installed to disrupt beta-sheet association. Substituting the '
+                             'top-ranked one is the highest-value intervention available.'
                              % ', '.join(map(str, sites)), sites))
     return f
 
@@ -496,27 +503,94 @@ def calibrate(pairs, label_name, failure_value):
     print('Lift = P(failure | rule fires) / P(failure | it does not). 1.0 = no signal.')
     print('Below 1.0 means the rule fires MORE often on successes - investigate why.')
     print()
-    print('%-26s %5s %9s %9s %7s' % ('RULE', 'fires', 'fail|fire', 'fail|not', 'lift'))
-    print('-' * 62)
+    base = nfail / n
+    print('%-26s %5s %9s %9s %7s %s' %
+          ('RULE', 'fires', 'fail|fire', 'fail|not', 'lift', 'power'))
+    print('-' * 72)
     rows = []
+    skipped = []
     for rule in sorted(RULE_CATEGORY):
         fires = [d for d in data if rule in d[2]]
         rest = [d for d in data if rule not in d[2]]
-        if len(fires) < 10 or not rest:
+        if not fires or not rest:
+            skipped.append((rule, len(fires), 'never fires' if not fires else 'always fires'))
             continue
         a = sum(d[1] for d in fires) / len(fires)
         b = sum(d[1] for d in rest) / len(rest)
-        rows.append((a / b if b else float('inf'), rule, len(fires), a, b))
-    for lift, rule, nf, a, b in sorted(rows, reverse=True):
-        print('%-26s %5d %9.3f %9.3f %7.2f' % (rule, nf, a, b, lift))
+        # Expected failures among the firing rows under the null. Below ~10 the lift is
+        # dominated by counting noise and the rule is UNTESTED on this data, not refuted.
+        exp_fail = len(fires) * base
+        rows.append((a / b if b else float('inf'), rule, len(fires), a, b, exp_fail))
+    for lift, rule, nf, a, b, exp in sorted(rows, reverse=True):
+        if exp < 5:
+            tag = 'UNTESTED (exp. %.1f failures)' % exp
+        elif exp < 10:
+            tag = 'weak (exp. %.1f failures)' % exp
+        else:
+            tag = ''
+        print('%-26s %5d %9.3f %9.3f %7.2f %s' % (rule, nf, a, b, lift, tag))
+    for rule, nf, why in skipped:
+        print('%-26s %5d %9s %9s %7s %s' % (rule, nf, '-', '-', '-', why))
+    print()
+    print('power: expected failures among the firing rows under the null (fires x base rate).')
+    print('A rule marked UNTESTED could not have shown an effect on this data at any')
+    print('strength. That is a statement about the dataset, not about the chemistry --')
+    print('do not read it as the rule being disproved.')
+
+    # Do the severity tiers mean anything on this data? The tiers are assigned from
+    # mechanism, so whether they rank risk is an empirical question, not a given. A tier
+    # whose failure rate sits at or below the base rate is not a risk tier, whatever its
+    # name says -- and that is a reason to change where you set --min-severity, not a
+    # reason to relabel the rules.
+    print()
+    print('SEVERITY TIERS — measured, not assumed')
+    print('%-10s %6s %6s %10s %8s' % ('worst tier', 'n', 'fail', 'fail rate', 'vs base'))
+    print('-' * 46)
+    inv = {v: k for k, v in SEV_ORDER.items()}
+    tiers = {}
+    for seq, fail, rules, _ in data:
+        _, findings = scan_sequence(seq)
+        worst = max((SEV_ORDER[x.severity] for x in findings), default=0)
+        b = tiers.setdefault(inv[worst], [0, 0])
+        b[0] += 1
+        b[1] += fail
+    for t in ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'):
+        if t in tiers:
+            cnt, fl = tiers[t]
+            rate = fl / cnt
+            mark = '%.2fx' % (rate / base) if base else '-'
+            flag = '' if rate > base else '   <- at or below base rate'
+            print('%-10s %6d %6d %10.3f %8s%s' % (t, cnt, fl, rate, mark, flag))
+    print('%-10s %6d %6d %10.3f' % ('(all)', n, nfail, base))
+    print()
+    print('Set --min-severity to the lowest tier whose rate is clearly above the base rate.')
 
     labels = [d[1] for d in data]
     print()
-    print('%-16s %9s' % ('FEATURE', 'AUC(fail)'))
-    print('-' * 27)
+    print('%-16s %9s %8s %7s %s' % ('FEATURE', 'AUC(fail)', 'distinct', 'zeros', 'note'))
+    print('-' * 62)
     for f in CONT_FEATURES:
-        a = auc_rank([d[3].get(f, 0) for d in data], labels)
-        print('%-16s %9s' % (f, '%.4f' % a if a is not None else 'n/a'))
+        vals = [d[3].get(f, 0) for d in data]
+        a = auc_rank(vals, labels)
+        distinct = len(set(vals))
+        zfrac = sum(1 for v in vals if v == 0) / len(vals)
+        # A feature that is constant, near-constant, or mostly zero cannot carry signal on
+        # this data whatever its mechanism. Anchored-window features are the usual
+        # casualty: a window measured 8-25 residues from one terminus is only a few
+        # residues wide on short peptides, and empty on the shortest.
+        note = ''
+        if distinct <= 2:
+            note = 'DEGENERATE (near-constant here)'
+        elif zfrac >= 0.30:
+            note = 'DEGENERATE (%.0f%% zero)' % (100 * zfrac)
+        elif distinct < 8:
+            note = 'coarse (%d levels)' % distinct
+        print('%-16s %9s %8d %6.0f%% %s'
+              % (f, '%.4f' % a if a is not None else 'n/a', distinct, 100 * zfrac, note))
+    print()
+    print('A DEGENERATE feature has too little variation on this data to show an effect.')
+    print('Check the definition against the data range before concluding anything: an')
+    print('anchored window needs peptides long enough for the window to exist.')
 
     # --- cohort-confound check -------------------------------------------------
     by_len = {}
@@ -780,8 +854,13 @@ def main():
     ap.add_argument('--sep', help='delimiter for text files (else sniffed)')
     ap.add_argument('--format', choices=('text', 'json', 'csv'), default='text')
     ap.add_argument('--top', type=int, default=15, help='worst N sequences to list')
-    ap.add_argument('--min-severity', default='MEDIUM',
-                    choices=tuple(SEV_ORDER), help='floor for per-sequence listing')
+    ap.add_argument('--min-severity', default='HIGH',
+                    choices=tuple(SEV_ORDER),
+                    help="floor for per-sequence listing (default HIGH). MEDIUM is "
+                         "deliberately NOT the default: measured on a labelled set, "
+                         "sequences whose worst finding is MEDIUM fail at BELOW the base "
+                         "rate, so MEDIUM means 'unremarkable', not 'at risk'. Use "
+                         "--label-column to measure the tiers on your own data.")
     ap.add_argument('--summary-only', action='store_true')
     ap.add_argument('--label-column',
                     help='outcome column; given, the script calibrates rules on THIS dataset '

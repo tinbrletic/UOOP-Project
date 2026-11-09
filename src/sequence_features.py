@@ -226,6 +226,40 @@ def motifs(seq):
     }
 
 
+AA_ORDER = list("ACDEFGHIKLMNPQRSTVWY")
+
+
+def x_blocks(seq):
+    """The historical X4/X5/X8 blocks: N-terminal one-hot (20), residue counts (20) and
+    dipeptide counts (400).
+
+    Kept because they are not worthless, contrary to a first reading. A permutation test on
+    the best of the 400 dipeptides gives p=0.005 against a null ceiling of 0.038, and in
+    cross-validation they improve Random Forest (MCC 0.337 -> 0.355). But they *hurt* a
+    linear model badly (Logistic Regression MCC 0.303 -> 0.204), because 400 sparse
+    collinear columns overwhelm it. Include them for tree ensembles, not by default.
+
+    Note what the signal is: the top ten dipeptides are all pairs of small or
+    aliphatic-hydrophobic residues (AA, VA, LV, AV, VV, AI, IV, FA, FF, GA) -- the
+    aggregation signal fragmented into two-residue windows. The named positional features
+    recover roughly three times the per-feature signal by aggregating over a longer,
+    mechanistically chosen span. X8 adds to them rather than replacing them.
+    """
+    out = {}
+    for a in AA_ORDER:
+        out['X4_' + a] = 1 if seq[:1] == a else 0
+    for a in AA_ORDER:
+        out['X5_' + a] = seq.count(a)
+    seen = {}
+    for i in range(len(seq) - 1):
+        d = seq[i:i + 2]
+        seen[d] = seen.get(d, 0) + 1
+    for a in AA_ORDER:
+        for b in AA_ORDER:
+            out['X8_' + a + b] = seen.get(a + b, 0)
+    return out
+
+
 def all_features(seq, convention='paper', fractions=False):
     """Every sequence-derived feature, as one flat dict."""
     seq = (seq or '').strip().upper()
